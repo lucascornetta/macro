@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diário de Macros</title>
+<meta name="theme-color" content="#178A66">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Macros">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAF8F3; --surface:#FFFFFF; --ink:#23211C; --muted:#76726A; --faint:#A6A199;
+    --line:#ECE7DC; --line2:#DED8CB;
+    --carb:#D8881F; --carb-bg:#FBF0DC; --carb-ink:#8A560F;
+    --prot:#178A66; --prot-bg:#E2F3EC; --prot-ink:#0E5C45;
+    --fat:#6256C8; --fat-bg:#EAE8FA; --fat-ink:#3F379A;
+    --sugar:#C2557B; --sugar-bg:#FBEAF0; --sugar-ink:#8A2F50;
+    --salt:#5E7A99; --salt-bg:#EAF0F6; --salt-ink:#37506B;
+    --fiber:#5E8C3A; --fiber-bg:#EEF4E4; --fiber-ink:#3C5E22;
+    --good:#178A66; --over:#C0492B; --over-bg:#F8E7E2;
+    --radius:14px; --radius-sm:10px; --shadow:0 1px 2px rgba(35,33,28,.04);
+    --display:'Space Grotesk',system-ui,sans-serif;
+    --body:'Inter',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+    padding:0 16px 96px;max-width:800px;margin:0 auto;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:var(--display);font-weight:600;letter-spacing:-.01em}
+  .num{font-family:var(--display);font-variant-numeric:tabular-nums}
+  button{font-family:var(--body);cursor:pointer;border:none;background:none;color:inherit}
+  input,select,textarea{font-family:var(--body);font-size:15px;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--prot);outline-offset:1px}
+  ::placeholder{color:var(--faint)}
+  .hidden{display:none!important}
+
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:22px 0 14px;gap:8px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .dot{width:30px;height:30px;border-radius:9px;background:var(--prot);position:relative;flex:none}
+  .brand .dot::after{content:"";position:absolute;inset:9px;border-radius:3px;background:#fff;opacity:.92}
+  .brand h1{font-size:19px}
+  .brand .sub{font-size:12px;color:var(--muted)}
+  .navbtns{display:flex;gap:2px;flex-wrap:wrap}
+  .ghost{font-size:13px;color:var(--muted);padding:7px 10px;border-radius:9px}
+  .ghost:hover{background:var(--line);color:var(--ink)}
+  .ghost.on{background:var(--prot-bg);color:var(--prot-ink);font-weight:500}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .pad{padding:16px 18px}
+
+  .hero{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;margin-bottom:16px}
+  .gauge{position:relative;width:124px;height:124px;flex:none}
+  .gauge svg{transform:rotate(-90deg)}
+  .gauge .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .gauge .big{font-family:var(--display);font-size:29px;font-weight:600;line-height:1}
+  .gauge .lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+  .heromini{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 14px}
+  .mini .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .mini .v{font-family:var(--display);font-size:19px;font-weight:600;margin-top:1px}
+  .mini .v small{font-size:11px;color:var(--muted);font-weight:400;font-family:var(--body)}
+
+  .macros{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .macro{padding:13px 14px;border-radius:var(--radius-sm)}
+  .macro.carb{background:var(--carb-bg)} .macro.prot{background:var(--prot-bg)} .macro.fat{background:var(--fat-bg)}
+  .macro .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .macro .nm{font-size:13px;font-weight:600}
+  .carb .nm,.carb .amt,.carb .left{color:var(--carb-ink)} .prot .nm,.prot .amt,.prot .left{color:var(--prot-ink)} .fat .nm,.fat .amt,.fat .left{color:var(--fat-ink)}
+  .macro .amt{font-size:12px;font-family:var(--display);font-weight:500}
+  .track{height:7px;background:rgba(35,33,28,.08);border-radius:5px;overflow:hidden}
+  .fill{height:100%;border-radius:5px;transition:width .3s ease}
+  .carb .fill{background:var(--carb)} .prot .fill{background:var(--prot)} .fat .fill{background:var(--fat)}
+  .fill.over{background:var(--over)!important}
+  .macro .left{font-size:11px;margin-top:7px}
+  .macro .left.over{color:var(--over);font-weight:600}
+
+  .micros{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+  .micro{padding:11px 13px;border-radius:var(--radius-sm);border:1px solid var(--line)}
+  .micro .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+  .micro .nm{font-size:12.5px;font-weight:600}
+  .micro .amt{font-size:11.5px;font-family:var(--display);color:var(--muted)}
+  .micro.sugar .nm{color:var(--sugar-ink)} .micro.salt .nm{color:var(--salt-ink)} .micro.fiber .nm{color:var(--fiber-ink)}
+  .micro .t2{height:6px;background:rgba(35,33,28,.07);border-radius:4px;overflow:hidden}
+  .micro .f2{height:100%;border-radius:4px}
+  .micro.sugar .f2{background:var(--sugar)} .micro.salt .f2{background:var(--salt)} .micro.fiber .f2{background:var(--fiber)}
+  .micro .st{font-size:10.5px;margin-top:6px;color:var(--muted)}
+  .micro .st.over{color:var(--over);font-weight:600} .micro .st.ok{color:var(--good)}
+  .microcap{font-size:11px;color:var(--faint);margin-top:9px;text-align:center}
+
+  .sectitle{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:26px 2px 12px}
+
+  .meal{margin-bottom:10px;overflow:hidden}
+  .meal .head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px}
+  .meal .l{display:flex;align-items:center;gap:11px}
+  .meal .ic{width:30px;height:30px;border-radius:9px;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none}
+  .meal .nm{font-weight:600;font-size:15px}
+  .meal .meta{font-size:12px;color:var(--muted)}
+  .meal .kc{font-family:var(--display);font-weight:600;font-size:15px}
+  .meal .kc small{font-size:11px;color:var(--muted);font-weight:400;font-family:var(--body)}
+  .items{border-top:1px solid var(--line)}
+  .item{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line)}
+  .item:last-child{border-bottom:none}
+  .item .info{flex:1;min-width:0}
+  .item .iname{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .imac{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .item .ikc{font-family:var(--display);font-weight:600;font-size:14px;white-space:nowrap}
+  .item .gin{width:56px;text-align:right;border:1px solid var(--line2);border-radius:8px;padding:6px 7px;font-family:var(--display)}
+  .item .del{width:28px;height:28px;border-radius:8px;color:var(--faint);display:flex;align-items:center;justify-content:center;flex:none}
+  .item .del:hover{background:var(--over-bg);color:var(--over)}
+  .dotc{color:var(--carb)} .dotp{color:var(--prot)} .dotf{color:var(--fat)} b{font-weight:600}
+  .addbtn{display:flex;align-items:center;gap:7px;width:100%;padding:11px 16px;border-top:1px solid var(--line);color:var(--prot-ink);font-size:13px;font-weight:500}
+  .addbtn:hover{background:var(--prot-bg)}
+  .plus{width:18px;height:18px;border-radius:6px;background:var(--prot);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;flex:none}
+
+  .picker{border-top:1px solid var(--line);padding:12px 16px;background:var(--bg)}
+  .search{width:100%;padding:11px 13px;border:1px solid var(--line2);border-radius:10px;background:#fff}
+  .chips{display:flex;gap:6px;overflow-x:auto;padding:10px 0 4px;-webkit-overflow-scrolling:touch}
+  .chip{flex:none;font-size:12px;padding:6px 11px;border-radius:999px;border:1px solid var(--line2);background:#fff;color:var(--muted);white-space:nowrap}
+  .chip.on{background:var(--prot);color:#fff;border-color:var(--prot)}
+  .results{background:#fff;border:1px solid var(--line2);border-radius:10px;max-height:330px;overflow-y:auto;margin-top:4px}
+  .res{padding:11px 13px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .res:last-child{border-bottom:none}
+  .res:hover,.res.hl{background:var(--prot-bg)}
+  .res .rl{min-width:0} .res .rn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .res .rcat{font-size:11px;color:var(--faint)}
+  .res .rk{color:var(--muted);font-size:12px;font-family:var(--display);flex:none;text-align:right}
+  .res mark{background:transparent;color:var(--prot-ink);font-weight:600}
+  .picked{display:flex;align-items:center;gap:8px;margin-top:11px}
+  .picked .pn{flex:1;font-size:14px;font-weight:500}
+  .picked input{width:78px;padding:9px 10px;border:1px solid var(--line2);border-radius:9px;font-family:var(--display);text-align:right}
+  .unit{font-size:12px;color:var(--muted);margin-left:-4px}
+  .btn{background:var(--prot);color:#fff;font-weight:600;font-size:14px;padding:9px 16px;border-radius:9px}
+  .btn:hover{background:var(--prot-ink)} .btn:disabled{opacity:.5;cursor:default}
+  .btn.sec{background:var(--line);color:var(--ink)} .btn.sec:hover{background:var(--line2)}
+  .btn.sm{font-size:13px;padding:7px 12px}
+  .noplan{font-size:13px;color:var(--muted);padding:6px 0}
+
+  .sghead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .sghead h3{font-size:16px}
+  .sgctrl{display:flex;gap:8px;align-items:center}
+  .sghint{font-size:12.5px;color:var(--muted);margin:6px 0 13px}
+  .sghint b{color:var(--ink)}
+  .mealsel{font-size:13px;border:1px solid var(--line2);border-radius:9px;padding:8px 9px;background:#fff}
+  .aibtn{font-size:13px;font-weight:600;color:var(--fat-ink);border:1px solid var(--fat);border-radius:9px;padding:8px 12px;display:flex;align-items:center;gap:6px}
+  .aibtn:hover{background:var(--fat);color:#fff} .aibtn:disabled{opacity:.55;cursor:default}
+  .sg{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+  .sg:first-child{border-top:none}
+  .sgi{flex:1;min-width:0} .sgn{font-size:14px;font-weight:500} .sgm{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .sgreason{font-size:12px;color:var(--fat-ink);margin-top:3px;font-style:italic}
+  .sgadd{font-size:13px;font-weight:600;color:var(--prot-ink);border:1px solid var(--prot);border-radius:9px;padding:7px 13px;flex:none}
+  .sgadd:hover{background:var(--prot);color:#fff}
+  .aibox{margin-top:14px;padding-top:4px;border-top:1px dashed var(--line2)}
+  .aitag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--fat-ink);background:var(--fat-bg);padding:3px 9px;border-radius:999px;margin:10px 0 2px}
+
+  .setgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .field label{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:5px}
+  .field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--line2);border-radius:10px;background:#fff}
+  .span2{grid-column:1/-1}
+  .pctrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .pctsum{font-size:12px;margin-top:8px}
+  .pctsum.ok{color:var(--good)} .pctsum.bad{color:var(--over);font-weight:600}
+  .setactions{grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:4px}
+
+  /* library */
+  .libtools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .libtools .search{flex:1;min-width:180px}
+  .librow{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:7px;background:#fff}
+  .librow .li{flex:1;min-width:0}
+  .librow .ln{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .librow .lc{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .librow .lcat{font-size:10.5px;color:var(--faint);background:var(--line);padding:2px 8px;border-radius:999px;flex:none}
+  .iconbtn{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);flex:none}
+  .iconbtn:hover{background:var(--line);color:var(--ink)}
+  .iconbtn.danger:hover{background:var(--over-bg);color:var(--over)}
+  .edgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .edgrid .field.full{grid-column:1/-1}
+  .libcount{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .libcount b{color:var(--carb-ink);font-weight:600}
+  .libtools .tg{flex:none;font-size:13px;padding:10px 12px;border-radius:10px;border:1px solid var(--line2);background:#fff;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .libtools .tg.on{background:var(--carb);color:#fff;border-color:var(--carb)}
+  .tg .cnt{font-size:11px;background:var(--carb-bg);color:var(--carb-ink);border-radius:999px;padding:1px 7px}
+  .tg.on .cnt{background:rgba(255,255,255,.25);color:#fff}
+  .pendbadge{font-size:10px;font-weight:600;color:var(--carb-ink);background:var(--carb-bg);padding:3px 9px;border-radius:999px;flex:none;white-space:nowrap}
+  .librow .lmiss{color:var(--carb-ink)}
+  .field .pendmark{font-size:11px;color:var(--carb-ink);margin-left:6px}
+
+  .footnote{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;line-height:1.6}
+  .datebar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:8px 10px}
+  .dnav{width:38px;height:38px;border-radius:10px;font-size:22px;color:var(--ink);display:flex;align-items:center;justify-content:center;font-family:var(--display)}
+  .dnav:hover{background:var(--line)} .dnav:disabled{opacity:.3;cursor:default}
+  .dcenter{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .dcenter span{font-family:var(--display);font-weight:600;font-size:15px}
+  .dtoday{font-size:11px;color:var(--prot-ink);font-weight:500}.dtoday:hover{text-decoration:underline}
+  .metricsel{display:flex;gap:5px}
+  .mtb{font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--line2);background:#fff;color:var(--muted)}
+  .mtb.on{color:#fff;border-color:transparent}
+  .mtb.on.kcal{background:var(--ink)} .mtb.on.c{background:var(--carb)} .mtb.on.p{background:var(--prot)} .mtb.on.fat{background:var(--fat)}
+  .histrow{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:7px;background:#fff}
+  .histrow.cur{border-color:var(--prot);background:var(--prot-bg)}
+  .histrow .hi{flex:1;min-width:0}
+  .histrow .hd{font-size:14px;font-weight:600;font-family:var(--display)}
+  .histrow .hm{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .histrow .hk{font-family:var(--display);font-weight:600;font-size:14px;text-align:right}
+  .histrow .hk small{font-size:10px;color:var(--muted);font-weight:400;font-family:var(--body)}
+  .histrow .hopen{font-size:12px;font-weight:600;color:var(--prot-ink);border:1px solid var(--prot);border-radius:8px;padding:6px 11px;flex:none}
+  .histrow .hopen:hover{background:var(--prot);color:#fff}
+  @media(max-width:560px){
+    body{padding:0 12px 96px}
+    .hero{grid-template-columns:1fr;justify-items:center;text-align:center}
+    .heromini{width:100%}
+    .macros,.micros{grid-template-columns:1fr;gap:8px}
+    .setgrid{grid-template-columns:1fr}
+    .edgrid{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="dot"></div>
+    <div><h1>Diário de Macros</h1><div class="sub" id="goalSub">perder gordura</div></div>
+  </div>
+  <div class="navbtns">
+    <button class="ghost" id="navDay">Hoje</button>
+    <button class="ghost" id="navHist">Histórico</button>
+    <button class="ghost" id="navLib">Biblioteca</button>
+    <button class="ghost" id="navAcct">Conta</button>
+    <button class="ghost" id="btnSetup">Ajustes</button>
+    <button class="ghost" id="btnExport">Salvar</button>
+    <button class="ghost" id="btnImport">Abrir</button>
+  </div>
+</header>
+
+<!-- SETUP -->
+<div class="card pad hidden" id="setup" style="margin-bottom:14px">
+  <div class="setgrid">
+    <div class="field"><label>Objetivo</label>
+      <select id="sGoal"><option value="perder">Perder gordura</option><option value="manter">Manter peso</option><option value="ganhar">Ganhar massa</option></select></div>
+    <div class="field"><label>Observação (opcional)</label><input id="sNote" type="text" placeholder="ex: reduzir açúcar à noite"></div>
+    <div class="field"><label>Meta de calorias diárias (kcal)</label><input id="sKcal" type="number" inputmode="numeric"></div>
+    <div class="field"><label>Metabolismo basal — TMB (kcal)</label><input id="sBmr" type="number" inputmode="numeric"></div>
+    <div class="field span2"><label>Divisão ideal dos macros (%)</label>
+      <div class="pctrow">
+        <div><input id="sC" type="number" inputmode="numeric" style="border-top:3px solid var(--carb)"><div style="font-size:11px;color:var(--carb-ink);margin-top:4px;font-weight:600">Carboidrato</div></div>
+        <div><input id="sP" type="number" inputmode="numeric" style="border-top:3px solid var(--prot)"><div style="font-size:11px;color:var(--prot-ink);margin-top:4px;font-weight:600">Proteína</div></div>
+        <div><input id="sF" type="number" inputmode="numeric" style="border-top:3px solid var(--fat)"><div style="font-size:11px;color:var(--fat-ink);margin-top:4px;font-weight:600">Gordura</div></div>
+      </div><div class="pctsum" id="pctSum"></div></div>
+    <div class="field"><label>Limite de açúcar (% das kcal)</label><input id="sSugar" type="number" inputmode="numeric"><div style="font-size:11px;color:var(--faint);margin-top:4px">OMS: ≤10% (ideal ≤5%)</div></div>
+    <div class="field"><label>Limite de sal (g/dia)</label><input id="sSalt" type="number" inputmode="decimal" step="0.5"><div style="font-size:11px;color:var(--faint);margin-top:4px">OMS: &lt;5 g</div></div>
+    <div class="field"><label>Meta de fibra (g/dia)</label><input id="sFiber" type="number" inputmode="numeric"><div style="font-size:11px;color:var(--faint);margin-top:4px">OMS: ≥25 g</div></div>
+    <div class="field span2"><label>Motor de IA das sugestões</label>
+      <select id="sAiProvider"><option value="claude">Dentro do Claude / meu proxy</option><option value="gemini">Google Gemini (chave grátis própria)</option></select>
+      <div style="font-size:11px;color:var(--faint);margin-top:4px">Gemini funciona sem proxy, direto do navegador, com chave grátis do Google AI Studio.</div></div>
+    <div class="field span2"><label>Endpoint do proxy (modo Claude/proxy)</label><input id="sAi" type="text" placeholder="vazio = dentro do Claude · ou https://seu-proxy…"></div>
+    <div class="field"><label>Chave Gemini (AI Studio)</label><input id="sGemKey" type="text" placeholder="AIza…" autocomplete="off"><div style="font-size:11px;color:var(--faint);margin-top:4px">Salva só neste navegador. Não publique o arquivo com a chave dentro.</div></div>
+    <div class="field"><label>Modelo Gemini</label><input id="sGemModel" type="text" placeholder="gemini-2.5-flash"><div style="font-size:11px;color:var(--faint);margin-top:4px">Padrão: gemini-2.5-flash (grátis).</div></div>
+    <div class="setactions"><button class="btn sec" id="setCancel">Fechar</button><button class="btn" id="setSave">Salvar ajustes</button></div>
+  </div>
+</div>
+
+<!-- ======== DAY VIEW ======== -->
+<div id="viewDay">
+  <div class="datebar">
+    <button class="dnav" id="datePrev" aria-label="dia anterior">‹</button>
+    <div class="dcenter"><span id="dateLabel">Hoje</span><button class="dtoday hidden" id="dateToday">ir para hoje</button></div>
+    <button class="dnav" id="dateNext" aria-label="próximo dia">›</button>
+  </div>
+  <div class="card pad" id="dash" style="margin-top:14px">
+    <div class="hero">
+      <div class="gauge">
+        <svg width="124" height="124" viewBox="0 0 124 124">
+          <circle cx="62" cy="62" r="54" fill="none" stroke="var(--line)" stroke-width="12"></circle>
+          <circle id="ring" cx="62" cy="62" r="54" fill="none" stroke="var(--prot)" stroke-width="12" stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3"></circle>
+        </svg>
+        <div class="center"><div class="big num" id="hKcalLeft">—</div><div class="lbl" id="hKcalLbl">kcal restantes</div></div>
+      </div>
+      <div class="heromini">
+        <div class="mini"><div class="k">Meta</div><div class="v num" id="hMeta">—<small> kcal</small></div></div>
+        <div class="mini"><div class="k">Consumido</div><div class="v num" id="hCons">—<small> kcal</small></div></div>
+        <div class="mini"><div class="k">TMB basal</div><div class="v num" id="hBmr">—<small> kcal</small></div></div>
+        <div class="mini"><div class="k">Déficit alvo</div><div class="v num" id="hDef">—<small> kcal</small></div></div>
+      </div>
+    </div>
+    <div class="macros" id="macros"></div>
+    <div class="micros" id="micros"></div>
+    <div class="microcap" id="microcap"></div>
+  </div>
+
+  <div class="card pad" id="sugCard" style="margin-top:14px">
+    <div class="sghead">
+      <h3>Sugestões pro que falta</h3>
+      <div class="sgctrl">
+        <select class="mealsel" id="sugMeal"></select>
+        <button class="aibtn" id="aiBtn">✨ Sugerir com IA</button>
+      </div>
+    </div>
+    <div class="sghint" id="sugHint"></div>
+    <div id="sugList"></div>
+    <div class="aibox hidden" id="aiBox"></div>
+  </div>
+
+  <div class="sectitle">Refeições</div>
+  <div id="meals"></div>
+  <div class="footnote" id="foot"></div>
+</div>
+
+<!-- ======== LIBRARY VIEW ======== -->
+<div id="viewLib" class="hidden">
+  <div class="card pad" style="margin-top:14px">
+    <div class="sghead" style="margin-bottom:12px"><h3>Biblioteca de alimentos</h3>
+      <button class="btn sm" id="libNew">+ Novo alimento</button></div>
+    <div class="libtools">
+      <input class="search" id="libSearch" placeholder="Buscar alimento…" autocomplete="off">
+      <select class="mealsel" id="libCat"></select>
+      <button class="tg" id="libPend"><span>⚠ Pendentes</span><span class="cnt" id="libPendCnt">0</span></button>
+    </div>
+    <div class="libcount" id="libCount"></div>
+    <div id="libEditor"></div>
+    <div id="libList"></div>
+    <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span style="font-size:11.5px;color:var(--faint)">Todos os valores são por 100 g.</span>
+      <button class="ghost" id="libReset" style="color:var(--over)">Restaurar biblioteca original</button>
+    </div>
+  </div>
+</div>
+
+<div id="viewHist" class="hidden">
+  <div class="card pad" style="margin-top:14px">
+    <div class="sghead" style="margin-bottom:6px"><h3>Tendência</h3>
+      <div class="metricsel" id="metricSel"></div></div>
+    <div class="sghint" id="histStat"></div>
+    <div id="chart"></div>
+  </div>
+  <div class="sectitle">Dias registrados</div>
+  <div id="histList"></div>
+</div>
+
+<div id="viewAcct" class="hidden">
+  <div class="card pad" style="margin-top:14px;max-width:440px">
+    <div style="font-family:var(--display);font-weight:600;font-size:17px;margin-bottom:4px">Conta &amp; sincronização</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Entre para carregar sua biblioteca e histórico em qualquer aparelho. Sem conta, tudo continua salvo só neste navegador.</div>
+    <div id="acctBody"></div>
+  </div>
+</div>
+
+<input type="file" id="fileIn" accept="application/json" style="display:none">
+
+<script>
+const DEFAULT_FOODS = [{"n":"Abacate","cat":"Fruta","kcal":160.0,"c":9.0,"p":2.0,"f":15.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Abacaxi","cat":"Fruta","kcal":50.0,"c":13.0,"p":0.5,"f":0.1,"su":9.26,"sat":null,"sa":0.0,"fi":1.4,"note":null},{"n":"Abóbora","cat":"Vegetal","kcal":45.0,"c":12.0,"p":1.0,"f":0.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Abobrinha","cat":"Vegetal","kcal":17.0,"c":3.1,"p":1.2,"f":0.3,"su":2.5,"sat":null,"sa":0.02,"fi":1.0,"note":null},{"n":"Activia Mix & Go Muesli chia quinoa mandorle","cat":"Grão/Cereal","kcal":113.0,"c":15.1,"p":6.1,"f":2.7,"su":9.7,"sat":null,"sa":0.16,"fi":1.8,"note":null},{"n":"Açucar","cat":"Doce/Snack","kcal":387.0,"c":100.0,"p":0,"f":0,"su":100.0,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Açucar de Coco","cat":"Doce/Snack","kcal":360.0,"c":100.0,"p":0,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Açucar Mascavo","cat":"Doce/Snack","kcal":389.0,"c":95.0,"p":0.3,"f":0.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Açúcar refinado","cat":"Doce/Snack","kcal":387.0,"c":100.0,"p":0.0,"f":0.0,"su":100.0,"sat":0.0,"sa":0.0,"fi":0.0,"note":null},{"n":"Agar Agar","cat":"Vegetal","kcal":26.0,"c":7.0,"p":0.5,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Albumina","cat":"Suplemento","kcal":48.0,"c":0,"p":10.9,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Alface","cat":"Vegetal","kcal":15.0,"c":2.9,"p":1.4,"f":0.2,"su":0.8,"sat":0.03,"sa":0.01,"fi":1.3,"note":null},{"n":"Alfajor Havanna Chocolate","cat":"Doce/Snack","kcal":375.0,"c":58.0,"p":6.4,"f":13.0,"su":31.0,"sat":null,"sa":0.15,"fi":0.0,"note":"50 gr cada"},{"n":"Alho","cat":"Vegetal","kcal":149.0,"c":33.0,"p":6.3,"f":0.5,"su":1.0,"sat":null,"sa":0.04,"fi":2.1,"note":null},{"n":"Almond Butter M&S","cat":"Gordura/Oleaginosa","kcal":613.0,"c":12.6,"p":21.2,"f":50.6,"su":3.7,"sat":null,"sa":0.01,"fi":11.0,"note":null},{"n":"Almond Croissant","cat":"Pão/Massa","kcal":434.0,"c":45.1,"p":8.0,"f":24.1,"su":17.0,"sat":null,"sa":1.0,"fi":2.4,"note":null},{"n":"Almond Milk Hude Health Organic","cat":"Laticínio","kcal":56.0,"c":10.5,"p":0.2,"f":1.49,"su":4.7,"sat":null,"sa":0.1,"fi":0.2,"note":null},{"n":"Almond Milk No sugars Lidl","cat":"Laticínio","kcal":15.0,"c":0.1,"p":0.5,"f":1.3,"su":0.1,"sat":null,"sa":0.15,"fi":0.3,"note":null},{"n":"Almond Milk Plenish","cat":"Laticínio","kcal":26.0,"c":0.4,"p":0.9,"f":2.2,"su":0.2,"sat":null,"sa":0.1,"fi":0.4,"note":null},{"n":"Almond Milk Plenish Barista","cat":"Laticínio","kcal":32.0,"c":1.7,"p":1.2,"f":2.1,"su":1.3,"sat":null,"sa":0.12,"fi":0.7,"note":null},{"n":"Almond Milk Rude Health Barista","cat":"Laticínio","kcal":63.0,"c":8.8,"p":1.1,"f":2.4,"su":4.5,"sat":null,"sa":0.1,"fi":0.7,"note":null},{"n":"Almond Yog Nush Protein Strawberry","cat":"Laticínio","kcal":98.0,"c":9.9,"p":4.9,"f":4.1,"su":8.0,"sat":null,"sa":0.14,"fi":0.0,"note":null},{"n":"Almond Yog Nush Raspberry","cat":"Laticínio","kcal":85.0,"c":8.1,"p":4.6,"f":3.5,"su":6.1,"sat":null,"sa":0.0,"fi":0.1,"note":null},{"n":"Alpro Hazelnut","cat":"Laticínio","kcal":29.0,"c":3.2,"p":0.4,"f":1.6,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Alpro Oat Milk Homegrown","cat":"Laticínio","kcal":44.0,"c":6.5,"p":0.4,"f":1.4,"su":2.6,"sat":null,"sa":0.1,"fi":1.9,"note":null},{"n":"Amêndoa","cat":"Gordura/Oleaginosa","kcal":579.0,"c":21.6,"p":21.1,"f":50.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Amendoim torrado","cat":"Gordura/Oleaginosa","kcal":567.0,"c":16.0,"p":26.0,"f":49.0,"su":4.7,"sat":7.0,"sa":0.02,"fi":8.5,"note":null},{"n":"Apple Puree","cat":"Fruta","kcal":51.0,"c":12.0,"p":0.3,"f":0.1,"su":10.0,"sat":null,"sa":0.0,"fi":1.3,"note":null},{"n":"Arla Protein Salted Caramel","cat":"Doce/Snack","kcal":77.0,"c":7.5,"p":10.0,"f":0.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Arroz","cat":"Grão/Cereal","kcal":130.0,"c":28.0,"p":2.7,"f":0.3,"su":0.1,"sat":null,"sa":0.0,"fi":0.4,"note":null},{"n":"Arroz Arborio Lidl Cru","cat":"Grão/Cereal","kcal":354.0,"c":80.4,"p":6.7,"f":0.4,"su":0.2,"sat":null,"sa":0.0,"fi":1.0,"note":null},{"n":"Arroz Arborio Sainsbury","cat":"Grão/Cereal","kcal":146.0,"c":32.2,"p":3.2,"f":0,"su":0.0,"sat":null,"sa":0.01,"fi":0.0,"note":null},{"n":"Arroz branco cozido","cat":"Grão/Cereal","kcal":128.0,"c":28.0,"p":2.5,"f":0.2,"su":0.1,"sat":0.05,"sa":0.0,"fi":1.6,"note":null},{"n":"Arroz integral cozido","cat":"Grão/Cereal","kcal":124.0,"c":26.0,"p":2.6,"f":1.0,"su":0.2,"sat":0.2,"sa":0.0,"fi":2.7,"note":null},{"n":"Atum","cat":"Proteína","kcal":108.0,"c":0,"p":25.0,"f":0.9,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Atum em água","cat":"Proteína","kcal":116.0,"c":0.0,"p":26.0,"f":1.0,"su":0.0,"sat":0.3,"sa":0.8,"fi":0.0,"note":null},{"n":"Aveia","cat":"Grão/Cereal","kcal":363.0,"c":60.5,"p":10.3,"f":7.0,"su":0.5,"sat":null,"sa":0.12,"fi":1.7,"note":null},{"n":"Aveia - Scottish Organic Oats M&S","cat":"Grão/Cereal","kcal":372.0,"c":60.7,"p":10.8,"f":7.7,"su":1.1,"sat":null,"sa":0.03,"fi":8.2,"note":null},{"n":"Aveia em flocos","cat":"Grão/Cereal","kcal":389.0,"c":66.0,"p":17.0,"f":7.0,"su":0.9,"sat":1.2,"sa":0.0,"fi":10.0,"note":null},{"n":"Avocado","cat":"Fruta","kcal":197.0,"c":1.9,"p":1.9,"f":19.5,"su":0.2,"sat":null,"sa":0.02,"fi":5.0,"note":null},{"n":"Avocado smashed Deluxe Lidl","cat":"Fruta","kcal":155.0,"c":4.0,"p":2.7,"f":13.4,"su":0.3,"sat":null,"sa":0.33,"fi":3.7,"note":null},{"n":"Azeite","cat":"Gordura/Oleaginosa","kcal":822.0,"c":0,"p":0,"f":91.3,"su":0.0,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Azeite de oliva","cat":"Gordura/Oleaginosa","kcal":884.0,"c":0.0,"p":0.0,"f":100.0,"su":0.0,"sat":14.0,"sa":0.0,"fi":0.0,"note":null},{"n":"Azeitona Preta","cat":"Gordura/Oleaginosa","kcal":194.0,"c":5.5,"p":1.2,"f":20.3,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Baby Leaf Spinach Sainsbury","cat":"Vegetal","kcal":19.0,"c":0,"p":2.6,"f":0.6,"su":0.0,"sat":null,"sa":0.08,"fi":1.0,"note":null},{"n":"Baked Oats Cacao Mari","cat":"Prato pronto","kcal":151.6,"c":20.9,"p":8.2,"f":3.1,"su":4.8,"sat":null,"sa":0.1,"fi":4.2,"note":null},{"n":"Balsamic Glaze Odysea","cat":"Molho/Condimento","kcal":171.0,"c":42.0,"p":0.5,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Banana","cat":"Fruta","kcal":89.0,"c":23.0,"p":1.1,"f":0.3,"su":12.0,"sat":null,"sa":0.0,"fi":2.6,"note":null},{"n":"Banana da Terra","cat":"Fruta","kcal":122.0,"c":32.0,"p":1.3,"f":0.4,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Banana prata","cat":"Fruta","kcal":98.0,"c":26.0,"p":1.3,"f":0.1,"su":17.0,"sat":0.04,"sa":0.0,"fi":2.0,"note":null},{"n":"Bananinha Paraibuna sem açúcar","cat":"Doce/Snack","kcal":68.0,"c":16.0,"p":1.1,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":"por 23g"},{"n":"Bar Grenade Peanut Nutter","cat":"Gordura/Oleaginosa","kcal":363.0,"c":29.0,"p":33.0,"f":15.0,"su":2.9,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Bar Optimum Nutrition White, Caramel, Peanuts","cat":"Gordura/Oleaginosa","kcal":333.0,"c":34.0,"p":29.0,"f":11.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Barrinha Bold Leite e Avelã","cat":"Laticínio","kcal":379.0,"c":28.0,"p":33.0,"f":18.0,"su":null,"sat":null,"sa":null,"fi":null,"note":"60.0"},{"n":"Barrinha Bold Trufa de Chocolate","cat":"Doce/Snack","kcal":360.0,"c":32.0,"p":33.0,"f":15.0,"su":null,"sat":null,"sa":null,"fi":null,"note":"60.0"},{"n":"Barrinha Frusli Red Berry","cat":"Fruta","kcal":398.0,"c":77.0,"p":5.5,"f":6.7,"su":28.9,"sat":null,"sa":0.03,"fi":3.8,"note":"30.0"},{"n":"Barrinha Fulfil Choc Salted Caramel","cat":"Doce/Snack","kcal":372.0,"c":29.0,"p":37.0,"f":15.0,"su":2.6,"sat":null,"sa":0.62,"fi":6.2,"note":"40g"},{"n":"Barrinha Misfit Cookie Dough","cat":"Doce/Snack","kcal":348.0,"c":37.0,"p":31.0,"f":13.0,"su":1.3,"sat":null,"sa":null,"fi":null,"note":"50g"},{"n":"Barrinha My Protein Cookie Crumble","cat":"Doce/Snack","kcal":344.0,"c":34.0,"p":33.0,"f":9.4,"su":3.1,"sat":null,"sa":null,"fi":null,"note":"60.0"},{"n":"Barrinha Nakd Peanut Butter protein bar","cat":"Suplemento","kcal":420.0,"c":34.0,"p":17.0,"f":21.0,"su":28.0,"sat":null,"sa":0.4,"fi":15.0,"note":null},{"n":"Barrinha Trek High Protein Choc Caramel","cat":"Doce/Snack","kcal":361.0,"c":16.0,"p":27.0,"f":16.0,"su":4.0,"sat":null,"sa":1.2,"fi":28.0,"note":"44.0"},{"n":"Batata","cat":"Vegetal","kcal":77.0,"c":17.0,"p":2.0,"f":0.1,"su":0.8,"sat":null,"sa":0.0,"fi":1.6,"note":null},{"n":"Batata Doce","cat":"Vegetal","kcal":86.0,"c":20.0,"p":1.6,"f":0.1,"su":4.2,"sat":null,"sa":0.13,"fi":3.0,"note":null},{"n":"Batata frita caseira","cat":"Vegetal","kcal":280.0,"c":36.0,"p":4.3,"f":13.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Batata inglesa cozida","cat":"Vegetal","kcal":86.0,"c":20.0,"p":1.7,"f":0.1,"su":0.9,"sat":0.03,"sa":0.01,"fi":1.8,"note":null},{"n":"Bauducco Choco Biscuit","cat":"Outros","kcal":480.0,"c":63.33,"p":7.33,"f":22.0,"su":null,"sat":null,"sa":null,"fi":null,"note":"8.6"},{"n":"BBQ Sauce M&S","cat":"Molho/Condimento","kcal":163.0,"c":36.2,"p":2.4,"f":0.6,"su":32.0,"sat":null,"sa":1.35,"fi":1.5,"note":null},{"n":"Beetroot Sourdough Cracker","cat":"Pão/Massa","kcal":369.0,"c":74.3,"p":13.2,"f":1.0,"su":8.2,"sat":null,"sa":1.15,"fi":5.2,"note":"4g per cracker"},{"n":"Belvita Soft Bakes Chocolate Hazelnut","cat":"Gordura/Oleaginosa","kcal":408.0,"c":62.0,"p":5.3,"f":15.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Berinjela","cat":"Vegetal","kcal":25.0,"c":6.0,"p":1.0,"f":0.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Beterraba","cat":"Vegetal","kcal":43.0,"c":10.0,"p":1.6,"f":0.2,"su":7.0,"sat":null,"sa":0.19,"fi":2.8,"note":null},{"n":"Biscoito Bahlsen chocolate","cat":"Pão/Massa","kcal":505.0,"c":61.0,"p":7.5,"f":25.0,"su":36.0,"sat":null,"sa":0.47,"fi":16.0,"note":"14.0"},{"n":"Biscoito Ritz Cheese","cat":"Laticínio","kcal":494.0,"c":58.0,"p":9.2,"f":24.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Black Beans Waitrose Organic","cat":"Leguminosa","kcal":90.0,"c":8.1,"p":7.3,"f":0.8,"su":0.3,"sat":null,"sa":0.0,"fi":10.3,"note":null},{"n":"Black Forest Iced Gateau","cat":"Doce/Snack","kcal":334.0,"c":35.8,"p":3.6,"f":19.0,"su":23.7,"sat":null,"sa":0.15,"fi":2.8,"note":null},{"n":"Black olives Fragata","cat":"Gordura/Oleaginosa","kcal":125.0,"c":0,"p":0.5,"f":1.3,"su":0.0,"sat":null,"sa":2.0,"fi":0.0,"note":null},{"n":"Blueberry","cat":"Fruta","kcal":57.0,"c":14.0,"p":0.7,"f":0.3,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Blueberry congelada Sainsbury","cat":"Fruta","kcal":45.0,"c":9.1,"p":0.9,"f":0.3,"su":9.1,"sat":null,"sa":0.01,"fi":1.5,"note":null},{"n":"Bolacha Cream Cracker Bauducco","cat":"Pão/Massa","kcal":460.0,"c":67.0,"p":12.0,"f":16.0,"su":null,"sat":null,"sa":null,"fi":null,"note":"4,3 a unidade"},{"n":"Bolacha recheada M&S Extra Cream Bourbon Creams","cat":"Pão/Massa","kcal":508.0,"c":64.4,"p":4.8,"f":25.1,"su":36.7,"sat":null,"sa":2.5,"fi":0.18,"note":"14.6"},{"n":"Bolo de Cenoura","cat":"Vegetal","kcal":415.0,"c":79.0,"p":5.0,"f":10.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Bom bom Ferrero Rocher","cat":"Doce/Snack","kcal":603.0,"c":44.4,"p":8.2,"f":42.7,"su":39.9,"sat":null,"sa":0.153,"fi":0.0,"note":"12,5 cada bom bom"},{"n":"Bom bons M&S","cat":"Outros","kcal":531.0,"c":54.5,"p":6.7,"f":31.2,"su":45.2,"sat":null,"sa":0.2,"fi":2.6,"note":null},{"n":"Bom-Bom Amendoim Mari","cat":"Gordura/Oleaginosa","kcal":322.0,"c":16.88,"p":17.74,"f":19.0,"su":12.12,"sat":null,"sa":0.4,"fi":3.9,"note":"23,1 cada"},{"n":"Brócolis","cat":"Vegetal","kcal":34.0,"c":7.0,"p":2.8,"f":0.4,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Brócolis cozido","cat":"Vegetal","kcal":35.0,"c":7.2,"p":2.4,"f":0.4,"su":1.4,"sat":0.05,"sa":0.08,"fi":3.3,"note":null},{"n":"Brown Sugar Waitrose","cat":"Doce/Snack","kcal":389.0,"c":96.7,"p":0,"f":0,"su":96.7,"sat":null,"sa":0.19,"fi":0.5,"note":null},{"n":"Brownie Chocolate","cat":"Doce/Snack","kcal":466.0,"c":50.0,"p":6.0,"f":29.0,"su":41.3,"sat":null,"sa":0.35,"fi":2.5,"note":null},{"n":"Burger Plants Sweet Potato Black Beans","cat":"Proteína","kcal":186.0,"c":18.0,"p":7.2,"f":7.0,"su":2.8,"sat":null,"sa":1.07,"fi":10.0,"note":"90 serving"},{"n":"Burrata N1 Waitrose","cat":"Laticínio","kcal":253.0,"c":1.5,"p":10.7,"f":22.7,"su":1.2,"sat":null,"sa":0.44,"fi":0.0,"note":null},{"n":"Butternut Squash Soup M&S Golden","cat":"Vegetal","kcal":108.0,"c":5.1,"p":0.9,"f":9.1,"su":3.7,"sat":null,"sa":0.66,"fi":1.2,"note":null},{"n":"Butternut Squash Soup M&S Smooth","cat":"Vegetal","kcal":42.0,"c":4.6,"p":0.7,"f":2.1,"su":2.8,"sat":null,"sa":0.5,"fi":0.8,"note":null},{"n":"Cacao Powder Naturya","cat":"Molho/Condimento","kcal":364.0,"c":22.0,"p":27.0,"f":12.0,"su":1.0,"sat":null,"sa":0.15,"fi":28.0,"note":"-25.0"},{"n":"Café","cat":"Bebida","kcal":0.0,"c":0,"p":0.1,"f":0,"su":0.0,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Café coado sem açúcar","cat":"Bebida","kcal":2.0,"c":0.3,"p":0.1,"f":0.0,"su":0.0,"sat":0.0,"sa":0.0,"fi":0.0,"note":null},{"n":"Caldo Ervilha e Espinafre Mari","cat":"Leguminosa","kcal":70.6,"c":4.6,"p":7.2,"f":2.3,"su":1.8,"sat":null,"sa":0.5,"fi":2.4,"note":null},{"n":"Camarão cozido","cat":"Proteína","kcal":99.0,"c":0.2,"p":24.0,"f":0.3,"su":0.0,"sat":0.1,"sa":0.3,"fi":0.0,"note":null},{"n":"Canjica com leite condensado","cat":"Laticínio","kcal":266.0,"c":47.25,"p":5.53,"f":6.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Caqui","cat":"Fruta","kcal":70.0,"c":18.59,"p":0.58,"f":0.19,"su":12.53,"sat":null,"sa":0.0,"fi":3.6,"note":null},{"n":"Carne File Mignon","cat":"Proteína","kcal":267.0,"c":0,"p":26.0,"f":17.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Carne Moida","cat":"Proteína","kcal":241.0,"c":0,"p":24.0,"f":15.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Carne Moida 5% Lidl Grass Fed","cat":"Proteína","kcal":127.0,"c":0,"p":21.9,"f":4.1,"su":0.0,"sat":null,"sa":0.1,"fi":0.0,"note":null},{"n":"Carne Moida 5% sainsbury","cat":"Proteína","kcal":168.0,"c":0,"p":31.3,"f":4.7,"su":0.0,"sat":null,"sa":0.23,"fi":0.0,"note":null},{"n":"Carpaccio Carne","cat":"Proteína","kcal":250.0,"c":7.3,"p":16.0,"f":16.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Carrot Cake M&S","cat":"Vegetal","kcal":389.0,"c":51.9,"p":4.2,"f":18.0,"su":31.8,"sat":null,"sa":0.6,"fi":1.3,"note":null},{"n":"Cashew Nut Butter Smooth M&S","cat":"Gordura/Oleaginosa","kcal":590.0,"c":30.6,"p":18.2,"f":42.9,"su":6.1,"sat":null,"sa":0.03,"fi":4.3,"note":null},{"n":"Castanha de Caju","cat":"Fruta","kcal":553.0,"c":30.0,"p":18.0,"f":44.0,"su":6.0,"sat":null,"sa":0.5,"fi":3.3,"note":null},{"n":"Castanha do Pará","cat":"Gordura/Oleaginosa","kcal":656.0,"c":12.0,"p":14.0,"f":66.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Catupiry","cat":"Laticínio","kcal":266.7,"c":0,"p":11.3,"f":24.3,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Cebola","cat":"Vegetal","kcal":40.0,"c":9.3,"p":1.1,"f":0.1,"su":4.2,"sat":0.04,"sa":0.0,"fi":1.7,"note":null},{"n":"Cenoura","cat":"Vegetal","kcal":41.0,"c":10.0,"p":0.9,"f":0.2,"su":4.7,"sat":null,"sa":0.17,"fi":2.8,"note":null},{"n":"Cenoura Carrots Batons","cat":"Vegetal","kcal":29.0,"c":4.3,"p":0.6,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Cenoura crua","cat":"Vegetal","kcal":41.0,"c":9.6,"p":0.9,"f":0.2,"su":4.7,"sat":0.03,"sa":0.17,"fi":2.8,"note":null},{"n":"Cerveja","cat":"Bebida","kcal":43.0,"c":3.6,"p":0.5,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Cerveja Leffe","cat":"Bebida","kcal":53.0,"c":4.7,"p":0.4,"f":0,"su":0.5,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Chai Latte Karamel Fredsted","cat":"Doce/Snack","kcal":405.0,"c":75.0,"p":9.5,"f":7.4,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Chargrilled Artichokes M&S","cat":"Vegetal","kcal":175.0,"c":5.0,"p":2.1,"f":15.4,"su":0.8,"sat":null,"sa":1.75,"fi":3.8,"note":null},{"n":"Cheat Spread Vilgain","cat":"Molho/Condimento","kcal":607.0,"c":28.0,"p":21.0,"f":45.0,"su":19.0,"sat":null,"sa":0.22,"fi":5.4,"note":null},{"n":"Cheese Twists M&S","cat":"Laticínio","kcal":515.0,"c":50.5,"p":12.1,"f":28.7,"su":2.6,"sat":null,"sa":1.85,"fi":3.3,"note":null},{"n":"Cherry Tomatoes M&S","cat":"Vegetal","kcal":22.0,"c":3.6,"p":1.1,"f":0.5,"su":3.6,"sat":null,"sa":0.01,"fi":1.3,"note":null},{"n":"Chia Naturya","cat":"Gordura/Oleaginosa","kcal":429.0,"c":7.3,"p":20.0,"f":28.0,"su":0.9,"sat":null,"sa":0.0,"fi":32.0,"note":null},{"n":"Chicken Sweet Smoke BBQ M&S","cat":"Proteína","kcal":132.0,"c":4.6,"p":24.6,"f":1.7,"su":3.9,"sat":null,"sa":0.83,"fi":0.0,"note":null},{"n":"Chicken Tesco Breadcrumb","cat":"Proteína","kcal":235.0,"c":13.1,"p":14.2,"f":13.6,"su":null,"sat":null,"sa":null,"fi":null,"note":"127.0"},{"n":"Chipotle Sauce Luchito Pineapple","cat":"Fruta","kcal":72.0,"c":17.0,"p":0.7,"f":0.3,"su":12.0,"sat":null,"sa":1.8,"fi":0.0,"note":null},{"n":"Chocolat Flors Crocant","cat":"Outros","kcal":621.0,"c":46.0,"p":7.6,"f":43.0,"su":44.0,"sat":null,"sa":0.5,"fi":0.0,"note":"6 cada"},{"n":"Chocolate 70% cacau aç demerara","cat":"Doce/Snack","kcal":587.0,"c":50.0,"p":7.9,"f":40.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Chocolate 75% M&S collection","cat":"Doce/Snack","kcal":582.0,"c":32.6,"p":9.4,"f":43.5,"su":25.5,"sat":null,"sa":0.01,"fi":11.2,"note":null},{"n":"Chocolate ao leite","cat":"Doce/Snack","kcal":535.0,"c":59.0,"p":7.6,"f":30.0,"su":52.0,"sat":18.0,"sa":0.08,"fi":3.4,"note":null},{"n":"Chocolate Blond Pistachio M&S","cat":"Gordura/Oleaginosa","kcal":576.0,"c":48.2,"p":7.7,"f":38.9,"su":41.9,"sat":null,"sa":0.25,"fi":1.2,"note":null},{"n":"Chocolate Green and Black 70%","cat":"Doce/Snack","kcal":580.0,"c":36.0,"p":9.1,"f":42.0,"su":29.0,"sat":null,"sa":0.01,"fi":10.0,"note":null},{"n":"Chocolate Greens & Black 85%","cat":"Doce/Snack","kcal":607.0,"c":24.0,"p":10.0,"f":50.0,"su":14.0,"sat":null,"sa":0.3,"fi":13.0,"note":null},{"n":"Chocolate HU cashew vanilla","cat":"Gordura/Oleaginosa","kcal":601.0,"c":38.0,"p":9.1,"f":44.0,"su":27.0,"sat":null,"sa":0.21,"fi":8.1,"note":null},{"n":"Chocolate Lindt salted caramel","cat":"Doce/Snack","kcal":530.0,"c":60.0,"p":6.3,"f":29.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Chocolate Milka Extra Cocoa","cat":"Laticínio","kcal":551.0,"c":46.0,"p":7.6,"f":36.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Chocolate Montezuma 100% cacao","cat":"Doce/Snack","kcal":604.0,"c":9.2,"p":13.0,"f":53.0,"su":2.7,"sat":null,"sa":0.02,"fi":17.0,"note":null},{"n":"Chocolate Montezuma Black forest cherry","cat":"Doce/Snack","kcal":567.0,"c":37.0,"p":9.0,"f":40.0,"su":31.0,"sat":null,"sa":0.3,"fi":9.0,"note":null},{"n":"Chocolate Only 4 cacau","cat":"Doce/Snack","kcal":640.0,"c":40.0,"p":6.4,"f":48.0,"su":null,"sat":null,"sa":null,"fi":null,"note":"3,33 (o quad)"},{"n":"Chocolate plant-based cookie","cat":"Doce/Snack","kcal":564.0,"c":60.0,"p":1.7,"f":35.0,"su":null,"sat":null,"sa":null,"fi":null,"note":"9.0"},{"n":"Chocolate Raw Halo 85%","cat":"Doce/Snack","kcal":608.0,"c":25.8,"p":9.6,"f":49.1,"su":13.6,"sat":null,"sa":0.1,"fi":0.0,"note":null},{"n":"Chocolate Simon Bombom chocolate com amendoa","cat":"Gordura/Oleaginosa","kcal":571.0,"c":40.0,"p":10.0,"f":40.0,"su":37.0,"sat":null,"sa":0.5,"fi":0.0,"note":null},{"n":"Chocolate Snickers","cat":"Doce/Snack","kcal":495.0,"c":58.0,"p":9.1,"f":25.0,"su":49.0,"sat":null,"sa":0.53,"fi":0.0,"note":null},{"n":"Chocolate Tony's Caramel Sea Salt","cat":"Doce/Snack","kcal":537.0,"c":54.0,"p":6.9,"f":32.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Chocolate Twix","cat":"Doce/Snack","kcal":493.0,"c":65.0,"p":4.6,"f":24.0,"su":48.0,"sat":null,"sa":0.4,"fi":0.0,"note":null},{"n":"Ciabatta Roll M&S","cat":"Pão/Massa","kcal":229.0,"c":41.5,"p":9.5,"f":1.5,"su":5.8,"sat":null,"sa":1.15,"fi":5.7,"note":"60g"},{"n":"Cinnamon Bun M&S","cat":"Pão/Massa","kcal":431.0,"c":48.0,"p":3.5,"f":25.0,"su":20.0,"sat":null,"sa":1.0,"fi":2.5,"note":"Unidade"},{"n":"Clara","cat":"Proteína","kcal":54.0,"c":0.7,"p":11.0,"f":0.2,"su":0.7,"sat":null,"sa":0.4,"fi":0.0,"note":null},{"n":"Coconut Oil Vilgain","cat":"Gordura/Oleaginosa","kcal":846.0,"c":0,"p":0,"f":94.0,"su":0.0,"sat":null,"sa":0.0,"fi":0.0,"note":"1.8"},{"n":"Cod, potato and Pea M&S Count on us","cat":"Proteína","kcal":78.0,"c":6.7,"p":7.6,"f":1.9,"su":1.1,"sat":null,"sa":0.33,"fi":1.9,"note":"380 pack"},{"n":"Cogumelo Closed cup white","cat":"Vegetal","kcal":28.0,"c":5.0,"p":2.2,"f":0.5,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Contra Filé","cat":"Proteína","kcal":244.0,"c":0,"p":27.0,"f":14.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Cooked chicken breast Waitrose","cat":"Proteína","kcal":133.0,"c":1.3,"p":25.3,"f":2.9,"su":0.0,"sat":null,"sa":0.48,"fi":0.0,"note":null},{"n":"Cookie Bauducco","cat":"Doce/Snack","kcal":436.0,"c":56.6,"p":5.66,"f":21.0,"su":null,"sat":null,"sa":null,"fi":null,"note":"15.0"},{"n":"Copinho Caramelo Framboesa Mari","cat":"Fruta","kcal":204.0,"c":22.0,"p":7.0,"f":8.5,"su":18.0,"sat":null,"sa":0.0,"fi":8.5,"note":"Aprox 44 cada"},{"n":"Cottage Creamy M&S","cat":"Laticínio","kcal":93.0,"c":5.2,"p":11.5,"f":2.8,"su":3.3,"sat":null,"sa":0.35,"fi":0.5,"note":null},{"n":"Cottage Fat Free Sainsbury","cat":"Laticínio","kcal":61.0,"c":3.8,"p":10.8,"f":0,"su":3.8,"sat":null,"sa":0.41,"fi":0.0,"note":null},{"n":"Cottage M&S reduced fat","cat":"Laticínio","kcal":82.0,"c":5.0,"p":12.2,"f":1.4,"su":3.6,"sat":null,"sa":0.5,"fi":0.38,"note":null},{"n":"Cottage Waitrose Reduced Fat","cat":"Laticínio","kcal":74.0,"c":4.6,"p":10.0,"f":1.8,"su":3.3,"sat":null,"sa":0.4,"fi":0.0,"note":null},{"n":"Couscous","cat":"Grão/Cereal","kcal":112.0,"c":23.0,"p":3.8,"f":0.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Couve-Flor","cat":"Vegetal","kcal":25.0,"c":5.0,"p":1.9,"f":0.3,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Couve-Manteiga","cat":"Vegetal","kcal":32.0,"c":5.0,"p":3.0,"f":0.6,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Coxa de frango assada","cat":"Proteína","kcal":209.0,"c":0.0,"p":26.0,"f":11.0,"su":0.0,"sat":3.0,"sa":0.2,"fi":0.0,"note":null},{"n":"Cream Cheese M&S Reduced Fat","cat":"Laticínio","kcal":162.0,"c":5.9,"p":8.8,"f":11.5,"su":4.1,"sat":null,"sa":0.35,"fi":0.0,"note":null},{"n":"Cream Cheese Philadelphia Lightest","cat":"Laticínio","kcal":87.0,"c":4.9,"p":11.0,"f":2.5,"su":4.9,"sat":null,"sa":0.85,"fi":0.4,"note":null},{"n":"Cream Cheese Philadelphia Original","cat":"Laticínio","kcal":226.0,"c":4.3,"p":5.4,"f":21.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Cream Cheese Reduced Fat Sainsbury","cat":"Laticínio","kcal":155.0,"c":3.9,"p":9.7,"f":11.0,"su":3.9,"sat":null,"sa":0.5,"fi":0.7,"note":null},{"n":"Cream Cheese reduced fat Waitrose","cat":"Laticínio","kcal":152.0,"c":3.6,"p":9.6,"f":11.0,"su":3.6,"sat":null,"sa":0.5,"fi":0.0,"note":null},{"n":"Cream of Tomato Tesco","cat":"Vegetal","kcal":72.0,"c":6.3,"p":1.8,"f":4.3,"su":5.1,"sat":null,"sa":0.45,"fi":0.6,"note":null},{"n":"Creme de Ricota Light","cat":"Laticínio","kcal":143.33,"c":3.33,"p":10.0,"f":10.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Creme de Tâmara","cat":"Doce/Snack","kcal":123.677,"c":27.232,"p":1.161,"f":0,"su":27.232,"sat":null,"sa":0.012,"fi":3.658,"note":null},{"n":"Crispbread Lidl gergilim","cat":"Pão/Massa","kcal":369.0,"c":57.4,"p":12.3,"f":6.3,"su":3.7,"sat":null,"sa":0.55,"fi":16.8,"note":null},{"n":"Crisps M&S Sea Salt and Black Pepper","cat":"Vegetal","kcal":499.0,"c":55.0,"p":6.7,"f":27.2,"su":0.9,"sat":null,"sa":1.28,"fi":3.8,"note":null},{"n":"Croissant Waitrose all butter","cat":"Pão/Massa","kcal":429.0,"c":40.6,"p":9.5,"f":24.9,"su":null,"sat":null,"sa":null,"fi":null,"note":"2.44"},{"n":"Crusty roll sainsbury","cat":"Pão/Massa","kcal":248.0,"c":49.4,"p":7.7,"f":1.6,"su":1.8,"sat":null,"sa":0.93,"fi":2.6,"note":null},{"n":"Cuca Mari","cat":"Doce/Snack","kcal":124.0,"c":17.47,"p":7.78,"f":1.47,"su":9.0,"sat":null,"sa":0.13,"fi":3.5,"note":null},{"n":"Cupcakes Half half Tesco","cat":"Doce/Snack","kcal":465.0,"c":59.3,"p":2.7,"f":24.0,"su":46.7,"sat":null,"sa":0.13,"fi":0.3,"note":null},{"n":"Dairylea cheese","cat":"Laticínio","kcal":201.0,"c":4.8,"p":12.0,"f":14.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Date Syrup Organic","cat":"Doce/Snack","kcal":301.0,"c":71.0,"p":2.7,"f":0.6,"su":62.0,"sat":null,"sa":0.4,"fi":0.0,"note":null},{"n":"Deliciously Ella Peanut Butter Caramel Cups","cat":"Gordura/Oleaginosa","kcal":409.0,"c":39.9,"p":11.4,"f":21.5,"su":22.5,"sat":null,"sa":0.5,"fi":5.3,"note":null},{"n":"Deliciously Ella Salted Almond Caramel Cups","cat":"Gordura/Oleaginosa","kcal":451.0,"c":51.3,"p":7.3,"f":23.0,"su":29.5,"sat":null,"sa":0.5,"fi":4.6,"note":"36g per pack"},{"n":"Digestives biscuit","cat":"Pão/Massa","kcal":496.0,"c":62.5,"p":6.7,"f":23.6,"su":28.5,"sat":null,"sa":0.94,"fi":3.0,"note":"17g per biscuit"},{"n":"Doce de Leite","cat":"Laticínio","kcal":315.0,"c":55.0,"p":7.0,"f":7.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Doce de Leite Aviação","cat":"Laticínio","kcal":345.0,"c":60.0,"p":7.0,"f":7.5,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Doce de Leite Carnation Caramel","cat":"Laticínio","kcal":303.0,"c":56.2,"p":5.6,"f":6.1,"su":56.1,"sat":null,"sa":0.15,"fi":0.0,"note":"397 lata"},{"n":"Doce de Leite Havanna","cat":"Laticínio","kcal":305.0,"c":55.0,"p":6.0,"f":6.5,"su":55.0,"sat":null,"sa":0.25,"fi":0.0,"note":null},{"n":"Double cream Emlea","cat":"Laticínio","kcal":303.0,"c":4.0,"p":2.4,"f":31.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Dulche de Leche Sainsbury","cat":"Outros","kcal":310.0,"c":57.0,"p":7.0,"f":6.0,"su":57.0,"sat":null,"sa":0.4,"fi":0.0,"note":null},{"n":"Eat Natural Protein Peanuts Dark Chocolate","cat":"Gordura/Oleaginosa","kcal":510.0,"c":32.4,"p":22.8,"f":30.5,"su":18.8,"sat":null,"sa":0.32,"fi":7.3,"note":"40.0"},{"n":"Edamame","cat":"Leguminosa","kcal":122.0,"c":10.0,"p":11.0,"f":5.0,"su":2.2,"sat":null,"sa":0.0,"fi":5.0,"note":null},{"n":"Egg White Two Chicks","cat":"Outros","kcal":48.0,"c":0,"p":10.9,"f":0,"su":0.0,"sat":null,"sa":0.41,"fi":0.0,"note":null},{"n":"Empadinha de frango","cat":"Proteína","kcal":358.0,"c":47.5,"p":6.9,"f":15.6,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Ervilha","cat":"Leguminosa","kcal":81.0,"c":14.0,"p":5.0,"f":0.4,"su":6.0,"sat":null,"sa":0.0,"fi":5.0,"note":null},{"n":"Espinafre","cat":"Vegetal","kcal":78.0,"c":0,"p":2.6,"f":0.6,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Extrato de baunilha Dr Oetker","cat":"Molho/Condimento","kcal":293.0,"c":73.0,"p":0,"f":0,"su":61.0,"sat":null,"sa":0.1,"fi":0.0,"note":null},{"n":"Falafel Cauldron","cat":"Leguminosa","kcal":222.0,"c":20.0,"p":7.6,"f":9.9,"su":3.8,"sat":null,"sa":1.3,"fi":11.0,"note":null},{"n":"Falafel Gosh Mediterranean","cat":"Leguminosa","kcal":264.0,"c":18.0,"p":7.6,"f":16.0,"su":3.5,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Falafel Gosh Moroccan","cat":"Leguminosa","kcal":225.0,"c":23.0,"p":7.1,"f":9.5,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Falafel Gosh Sweet Potato","cat":"Leguminosa","kcal":219.0,"c":19.9,"p":6.1,"f":10.9,"su":4.5,"sat":null,"sa":0.92,"fi":8.1,"note":"20.0"},{"n":"Falafel Salad Bowl Garbanzos","cat":"Leguminosa","kcal":168.0,"c":15.0,"p":6.4,"f":4.0,"su":2.6,"sat":null,"sa":0.17,"fi":0.0,"note":null},{"n":"Farinha All Purpose","cat":"Grão/Cereal","kcal":364.0,"c":76.0,"p":10.0,"f":1.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Farinha de Amendoa","cat":"Grão/Cereal","kcal":571.0,"c":21.0,"p":21.0,"f":50.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Farinha de Arroz","cat":"Grão/Cereal","kcal":359.0,"c":80.0,"p":6.9,"f":1.3,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Farinha de Aveia","cat":"Grão/Cereal","kcal":361.0,"c":59.0,"p":15.0,"f":7.2,"su":1.5,"sat":null,"sa":0.1,"fi":9.1,"note":null},{"n":"Farinha de Grão de Bico","cat":"Leguminosa","kcal":387.0,"c":58.0,"p":22.0,"f":7.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Farinha de Milho","cat":"Grão/Cereal","kcal":361.0,"c":76.8,"p":6.9,"f":3.9,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Farinha de Quinoa","cat":"Grão/Cereal","kcal":368.0,"c":69.0,"p":10.0,"f":7.5,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Farmgrilled Chicken Waitrose","cat":"Proteína","kcal":138.0,"c":0.6,"p":27.7,"f":2.7,"su":0.6,"sat":null,"sa":0.5,"fi":0.2,"note":null},{"n":"Feijão Carioca","cat":"Leguminosa","kcal":347.0,"c":63.0,"p":21.0,"f":1.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Feijão carioca cozido","cat":"Leguminosa","kcal":76.0,"c":13.6,"p":4.8,"f":0.5,"su":0.3,"sat":0.1,"sa":0.0,"fi":8.5,"note":null},{"n":"Feijão preto cozido","cat":"Leguminosa","kcal":77.0,"c":14.0,"p":4.5,"f":0.5,"su":0.3,"sat":0.1,"sa":0.0,"fi":8.4,"note":null},{"n":"Fermento Dry Yeast","cat":"Molho/Condimento","kcal":322.0,"c":17.6,"p":44.8,"f":3.4,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Feta Cheese","cat":"Laticínio","kcal":264.0,"c":4.1,"p":14.0,"f":31.0,"su":4.1,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Feta Filled Falafels","cat":"Laticínio","kcal":302.0,"c":18.7,"p":11.1,"f":18.5,"su":1.1,"sat":null,"sa":0.78,"fi":8.0,"note":"30g cada"},{"n":"Figo","cat":"Fruta","kcal":74.0,"c":19.2,"p":0.75,"f":0.3,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Filé mignon grelhado","cat":"Proteína","kcal":267.0,"c":0.0,"p":29.0,"f":16.0,"su":0.0,"sat":6.5,"sa":0.09,"fi":0.0,"note":null},{"n":"Flaxseeds","cat":"Gordura/Oleaginosa","kcal":526.0,"c":6.5,"p":23.0,"f":41.0,"su":1.6,"sat":null,"sa":0.21,"fi":20.0,"note":null},{"n":"Flocão de Milho Sinhá","cat":"Grão/Cereal","kcal":346.0,"c":77.0,"p":7.4,"f":0.9,"su":0.0,"sat":null,"sa":0.0,"fi":2.3,"note":null},{"n":"Focaccia Mari","cat":"Pão/Massa","kcal":388.0,"c":71.0,"p":10.0,"f":6.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Framboesa","cat":"Fruta","kcal":53.0,"c":12.0,"p":1.2,"f":0.7,"su":4.4,"sat":null,"sa":0.0,"fi":7.0,"note":null},{"n":"Framboesa congelada Sainsbury","cat":"Fruta","kcal":40.0,"c":4.6,"p":1.4,"f":0,"su":4.6,"sat":null,"sa":0.0,"fi":6.8,"note":null},{"n":"Frango Moido 5%","cat":"Proteína","kcal":168.0,"c":1.9,"p":26.7,"f":5.9,"su":0.0,"sat":null,"sa":0.21,"fi":0.0,"note":null},{"n":"Frango peito","cat":"Proteína","kcal":165.0,"c":0,"p":27.0,"f":3.6,"su":0.0,"sat":null,"sa":0.19,"fi":0.0,"note":null},{"n":"Frozen Yogurt Vanilla","cat":"Laticínio","kcal":131.0,"c":21.9,"p":5.4,"f":2.3,"su":19.5,"sat":null,"sa":0.15,"fi":0.0,"note":null},{"n":"Frutas Vermelhas congeladas Sainsbury","cat":"Fruta","kcal":38.0,"c":5.6,"p":0.9,"f":0.2,"su":5.6,"sat":null,"sa":0.0,"fi":5.1,"note":null},{"n":"Gails Seeded Sourdough","cat":"Pão/Massa","kcal":228.0,"c":36.7,"p":4.0,"f":6.4,"su":0.5,"sat":null,"sa":0.9,"fi":2.9,"note":null},{"n":"Garlic Bread Baguette M&S","cat":"Pão/Massa","kcal":379.0,"c":44.7,"p":7.3,"f":18.1,"su":3.2,"sat":null,"sa":1.05,"fi":4.1,"note":null},{"n":"Geleia Framboesa Maribo","cat":"Fruta","kcal":245.0,"c":65.0,"p":0,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Geleia Raspberry St Dalfour","cat":"Fruta","kcal":205.0,"c":50.0,"p":2.4,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Geleia Strawberry Preserve M&S","cat":"Fruta","kcal":236.0,"c":58.3,"p":0.4,"f":0,"su":55.7,"sat":null,"sa":0.0,"fi":0.5,"note":null},{"n":"Gergelim","cat":"Gordura/Oleaginosa","kcal":573.0,"c":23.0,"p":18.0,"f":50.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Gingerbread Waitrose","cat":"Pão/Massa","kcal":436.0,"c":67.7,"p":5.4,"f":15.5,"su":32.6,"sat":null,"sa":0.43,"fi":2.2,"note":null},{"n":"Gohan preparado","cat":"Grão/Cereal","kcal":160.0,"c":36.0,"p":3.0,"f":1.0,"su":0.5,"sat":null,"sa":0.0,"fi":0.5,"note":null},{"n":"Goiabada","cat":"Fruta","kcal":250.0,"c":64.1,"p":0.5,"f":0.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Gorgonzola Blue Stilton","cat":"Laticínio","kcal":410.0,"c":0.1,"p":23.7,"f":35.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Gorgonzola Piccante M&S","cat":"Laticínio","kcal":317.0,"c":1.1,"p":19.6,"f":26.0,"su":1.1,"sat":null,"sa":1.8,"fi":0.0,"note":null},{"n":"Grana Padano","cat":"Laticínio","kcal":393.0,"c":0.3,"p":3.3,"f":2.9,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Granola Cocoa & Hazelnut Bio&Me","cat":"Grão/Cereal","kcal":397.0,"c":47.0,"p":15.0,"f":13.0,"su":9.9,"sat":null,"sa":0.17,"fi":16.0,"note":null},{"n":"Grão de Bico","cat":"Leguminosa","kcal":364.0,"c":61.0,"p":19.0,"f":6.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Grão de bico cozido","cat":"Leguminosa","kcal":164.0,"c":27.0,"p":8.9,"f":2.6,"su":4.8,"sat":0.3,"sa":0.02,"fi":7.6,"note":null},{"n":"Gravy","cat":"Molho/Condimento","kcal":79.0,"c":5.0,"p":1.9,"f":6.0,"su":0.8,"sat":null,"sa":1.0,"fi":0.4,"note":null},{"n":"Green Olive Whole Odysea","cat":"Gordura/Oleaginosa","kcal":231.0,"c":0.9,"p":1.0,"f":24.0,"su":0.0,"sat":null,"sa":2.6,"fi":3.0,"note":null},{"n":"Guaraná","cat":"Bebida","kcal":40.0,"c":9.0,"p":0,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Guinness Pint","cat":"Bebida","kcal":167.0,"c":14.0,"p":1.8,"f":0,"su":0.0,"sat":null,"sa":0.0,"fi":0.0,"note":"1 pint"},{"n":"Gyoza Mushroom Edamame Ajinomoto","cat":"Leguminosa","kcal":133.0,"c":26.0,"p":4.9,"f":0.9,"su":3.9,"sat":null,"sa":1.0,"fi":1.2,"note":null},{"n":"Haddock Chunky Loin Taste the Difference","cat":"Proteína","kcal":109.0,"c":0,"p":22.4,"f":2.0,"su":0.0,"sat":null,"sa":0.24,"fi":0.0,"note":null},{"n":"Haddock smoked sainsbury","cat":"Proteína","kcal":102.0,"c":0.2,"p":22.6,"f":1.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Hamburguer","cat":"Proteína","kcal":262.0,"c":0.1,"p":26.0,"f":18.0,"su":0.1,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Heinz Garlic Sauce","cat":"Vegetal","kcal":371.0,"c":11.0,"p":1.9,"f":35.0,"su":8.4,"sat":null,"sa":1.3,"fi":0.0,"note":null},{"n":"Houmous Ramona Jalapeño","cat":"Leguminosa","kcal":262.0,"c":10.3,"p":6.2,"f":20.7,"su":0.7,"sat":null,"sa":1.1,"fi":4.9,"note":null},{"n":"Houmous Red Pepper Be Good","cat":"Leguminosa","kcal":145.0,"c":10.6,"p":5.8,"f":7.9,"su":1.4,"sat":null,"sa":0.74,"fi":4.4,"note":null},{"n":"Houmous Reduced Fat Tesco","cat":"Leguminosa","kcal":217.0,"c":11.5,"p":6.5,"f":15.3,"su":0.6,"sat":null,"sa":0.63,"fi":3.7,"note":null},{"n":"Houmous So Organic Sainsbury","cat":"Leguminosa","kcal":292.0,"c":10.9,"p":6.7,"f":23.8,"su":0.6,"sat":null,"sa":0.8,"fi":4.0,"note":null},{"n":"Houmous Stamford Street Co.","cat":"Leguminosa","kcal":224.0,"c":12.3,"p":5.6,"f":16.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Inhame","cat":"Proteína","kcal":118.0,"c":28.0,"p":1.5,"f":0.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Iogurte Desnatado Danone","cat":"Laticínio","kcal":52.5,"c":7.5,"p":5.6,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":"160.0"},{"n":"Iogurte desnatado Leitissimo","cat":"Laticínio","kcal":53.0,"c":4.7,"p":3.9,"f":1.4,"su":4.7,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Iogurte grego natural","cat":"Laticínio","kcal":97.0,"c":3.6,"p":9.0,"f":5.0,"su":3.6,"sat":3.2,"sa":0.05,"fi":0.0,"note":null},{"n":"Iogurte natural integral","cat":"Laticínio","kcal":61.0,"c":4.7,"p":3.5,"f":3.3,"su":4.7,"sat":2.0,"sa":0.13,"fi":0.0,"note":null},{"n":"Jasons Sourdough Ciabattin","cat":"Pão/Massa","kcal":230.0,"c":44.1,"p":10.1,"f":0.8,"su":2.4,"sat":null,"sa":0.92,"fi":2.9,"note":"aprox 44g fatia"},{"n":"Jordan Granola","cat":"Grão/Cereal","kcal":457.0,"c":55.5,"p":11.9,"f":19.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Jordan Granola No Suggar Triple Nut","cat":"Grão/Cereal","kcal":440.0,"c":47.0,"p":9.0,"f":20.0,"su":9.5,"sat":null,"sa":0.0,"fi":18.0,"note":null},{"n":"Just Add British Chicken Breast Marinated M&S","cat":"Proteína","kcal":136.0,"c":0.1,"p":28.9,"f":2.1,"su":0.0,"sat":null,"sa":0.53,"fi":0.5,"note":null},{"n":"Kallo Rice Cake","cat":"Grão/Cereal","kcal":394.0,"c":82.3,"p":8.5,"f":2.7,"su":0.5,"sat":null,"sa":0.3,"fi":0.0,"note":"7g per cake"},{"n":"Keta Salmon","cat":"Proteína","kcal":164.0,"c":0,"p":27.1,"f":6.0,"su":0.0,"sat":null,"sa":0.22,"fi":0.0,"note":null},{"n":"Kewpie Mayo","cat":"Molho/Condimento","kcal":686.0,"c":0.6,"p":2.5,"f":74.6,"su":0.4,"sat":null,"sa":1.8,"fi":0.0,"note":null},{"n":"Kidney Beans Napolina","cat":"Leguminosa","kcal":109.0,"c":16.2,"p":6.9,"f":0.5,"su":0.0,"sat":null,"sa":0.05,"fi":6.2,"note":null},{"n":"Kinder barrinha","cat":"Doce/Snack","kcal":566.0,"c":53.5,"p":8.7,"f":35.0,"su":53.3,"sat":null,"sa":0.313,"fi":0.0,"note":"12.5"},{"n":"Kinder Crispy","cat":"Doce/Snack","kcal":573.0,"c":51.8,"p":7.8,"f":36.8,"su":43.5,"sat":null,"sa":0.227,"fi":0.0,"note":"34.0"},{"n":"Kit Kat","cat":"Doce/Snack","kcal":502.0,"c":62.5,"p":6.9,"f":24.3,"su":49.6,"sat":null,"sa":0.22,"fi":2.3,"note":"41.5"},{"n":"Kiwi","cat":"Fruta","kcal":61.0,"c":15.0,"p":1.1,"f":0.5,"su":9.0,"sat":null,"sa":0.78,"fi":3.0,"note":"69.0"},{"n":"Konjac Noodles HB","cat":"Pão/Massa","kcal":9.0,"c":0.3,"p":0.3,"f":0.3,"su":0.3,"sat":null,"sa":0.01,"fi":4.0,"note":null},{"n":"Koppaberg Cider 0% Alcohol","cat":"Bebida","kcal":41.0,"c":10.1,"p":0,"f":0,"su":10.1,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Laranja","cat":"Fruta","kcal":47.0,"c":12.0,"p":0.9,"f":0.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Lavash Bread","cat":"Pão/Massa","kcal":296.0,"c":60.42,"p":10.7,"f":1.0,"su":1.7,"sat":null,"sa":1.11,"fi":0.0,"note":null},{"n":"Leek","cat":"Vegetal","kcal":61.0,"c":14.0,"p":1.5,"f":0.3,"su":3.9,"sat":null,"sa":0.05,"fi":1.8,"note":null},{"n":"Leite Alpro Nutty Almond","cat":"Laticínio","kcal":24.0,"c":2.6,"p":0.5,"f":1.1,"su":2.4,"sat":null,"sa":0.14,"fi":0.4,"note":null},{"n":"Leite Alpro Nutty Almond No Sugars","cat":"Laticínio","kcal":15.0,"c":0.5,"p":0,"f":0,"su":0.15,"sat":null,"sa":0.3,"fi":null,"note":null},{"n":"Leite Califia Almond Organic","cat":"Laticínio","kcal":23.0,"c":0,"p":0.9,"f":2.2,"su":0.0,"sat":null,"sa":0.16,"fi":0.0,"note":null},{"n":"Leite de amendoa Nature's Heart","cat":"Laticínio","kcal":14.0,"c":0.5,"p":0.4,"f":1.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Leite de Caju Barista a Tal da Castanha","cat":"Laticínio","kcal":39.0,"c":4.3,"p":1.2,"f":1.9,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Leite de Caju Plenish","cat":"Laticínio","kcal":32.0,"c":1.5,"p":0.9,"f":2.5,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Leite de Caju Plenish Organic","cat":"Laticínio","kcal":32.0,"c":1.2,"p":0.9,"f":2.5,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Leite de Coco em pó (puravida)","cat":"Laticínio","kcal":768.0,"c":12.0,"p":6.0,"f":60.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Leite desnatado","cat":"Laticínio","kcal":35.0,"c":5.0,"p":3.4,"f":0.1,"su":5.0,"sat":0.1,"sa":0.13,"fi":0.0,"note":null},{"n":"Leite integral","cat":"Laticínio","kcal":61.0,"c":4.8,"p":3.2,"f":3.3,"su":4.8,"sat":1.9,"sa":0.1,"fi":0.0,"note":null},{"n":"Leite Molico","cat":"Laticínio","kcal":35.0,"c":5.0,"p":3.2,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Leite Semidesnatado Fazenda","cat":"Laticínio","kcal":47.0,"c":4.9,"p":3.15,"f":1.5,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Lentilha cozida","cat":"Leguminosa","kcal":116.0,"c":20.0,"p":9.0,"f":0.4,"su":1.8,"sat":0.1,"sa":0.0,"fi":7.9,"note":null},{"n":"Limão","cat":"Fruta","kcal":29.0,"c":9.3,"p":1.1,"f":0.3,"su":2.5,"sat":0.04,"sa":0.0,"fi":2.8,"note":null},{"n":"Lindahls Kvarg Pro+ Banoffee Pie","cat":"Laticínio","kcal":60.0,"c":3.0,"p":12.0,"f":0.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Lindahls kvarg vanilla","cat":"Laticínio","kcal":54.0,"c":3.5,"p":10.0,"f":0.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Lindahls kvarg w chov","cat":"Laticínio","kcal":55.0,"c":3.4,"p":10.0,"f":0.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Lindahls Protein Pudding Chocolate","cat":"Doce/Snack","kcal":74.0,"c":6.8,"p":10.0,"f":0.6,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Lindahls Protein Pudding Salted Caramel","cat":"Doce/Snack","kcal":71.0,"c":7.4,"p":10.0,"f":0.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Lindt Excellence 70% cocoa dark","cat":"Doce/Snack","kcal":566.0,"c":34.0,"p":9.5,"f":41.0,"su":29.0,"sat":null,"sa":0.1,"fi":0.0,"note":null},{"n":"Lindt Lindor Barra","cat":"Doce/Snack","kcal":622.0,"c":47.0,"p":4.7,"f":47.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Lindt Wafer","cat":"Doce/Snack","kcal":548.0,"c":51.0,"p":8.3,"f":34.0,"su":41.0,"sat":null,"sa":0.28,"fi":0.0,"note":"30g"},{"n":"Linguiça","cat":"Proteína","kcal":301.0,"c":2.0,"p":12.0,"f":27.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Linguini Lidl Deluxe","cat":"Pão/Massa","kcal":358.0,"c":71.0,"p":14.0,"f":1.2,"su":3.4,"sat":null,"sa":0.0,"fi":3.4,"note":"Raw"},{"n":"Linhaça","cat":"Gordura/Oleaginosa","kcal":534.0,"c":29.0,"p":18.0,"f":42.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Lotus Biscoff","cat":"Doce/Snack","kcal":484.0,"c":72.6,"p":4.9,"f":19.0,"su":null,"sat":null,"sa":null,"fi":null,"note":"8.0"},{"n":"Love Corn Snack Sea Salt","cat":"Doce/Snack","kcal":435.0,"c":66.0,"p":7.4,"f":13.3,"su":0.7,"sat":null,"sa":1.5,"fi":7.0,"note":null},{"n":"M&M's Peanut","cat":"Gordura/Oleaginosa","kcal":524.0,"c":60.0,"p":9.7,"f":26.0,"su":53.0,"sat":null,"sa":0.11,"fi":0.0,"note":null},{"n":"M&S chicken mushroom count on us","cat":"Proteína","kcal":74.0,"c":6.5,"p":7.8,"f":1.6,"su":3.1,"sat":null,"sa":null,"fi":null,"note":null},{"n":"M&S Choc Marks Caramel, Shortbread, Chocolate Crispies Milk Chocolate","cat":"Laticínio","kcal":539.0,"c":56.0,"p":6.4,"f":31.7,"su":51.0,"sat":null,"sa":0.26,"fi":2.2,"note":null},{"n":"M&S Count On Us Creamy Roasted Mushroom Tagliatelle","cat":"Pão/Massa","kcal":99.0,"c":15.0,"p":3.5,"f":2.4,"su":0.8,"sat":null,"sa":0.25,"fi":1.8,"note":null},{"n":"M&S Count on us Triple chocolate sundae","cat":"Doce/Snack","kcal":130.0,"c":18.4,"p":4.5,"f":4.1,"su":13.6,"sat":null,"sa":null,"fi":null,"note":null},{"n":"M&S hazelnut mini bites","cat":"Gordura/Oleaginosa","kcal":527.0,"c":56.4,"p":8.8,"f":29.1,"su":42.7,"sat":null,"sa":0.18,"fi":1.9,"note":null},{"n":"M&S Mushroom & Black Truffle Pasta Sauce","cat":"Pão/Massa","kcal":140.0,"c":2.7,"p":3.1,"f":12.2,"su":2.7,"sat":null,"sa":0.75,"fi":3.4,"note":null},{"n":"M&S Vanilla High Protein Yogurt","cat":"Laticínio","kcal":71.0,"c":5.9,"p":11.0,"f":0.4,"su":3.9,"sat":null,"sa":0.08,"fi":0.0,"note":null},{"n":"Maçã","cat":"Fruta","kcal":52.0,"c":14.0,"p":0.3,"f":0.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Maçã Pink Lady","cat":"Fruta","kcal":56.0,"c":11.6,"p":0.6,"f":0.5,"su":11.6,"sat":null,"sa":0.0,"fi":1.2,"note":null},{"n":"Macadâmia","cat":"Fruta","kcal":718.0,"c":14.0,"p":8.0,"f":76.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Macaron Laduree","cat":"Fruta","kcal":400.0,"c":42.4,"p":6.7,"f":22.1,"su":null,"sat":null,"sa":null,"fi":null,"note":"14.5"},{"n":"Macarrão cozido","cat":"Pão/Massa","kcal":158.0,"c":31.0,"p":5.8,"f":0.9,"su":0.6,"sat":0.17,"sa":0.01,"fi":1.8,"note":null},{"n":"Maionese caseira","cat":"Outros","kcal":730.13,"c":0.65,"p":1.88,"f":81.4,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Mamão","cat":"Fruta","kcal":43.0,"c":11.0,"p":0.5,"f":0.3,"su":8.0,"sat":null,"sa":0.0,"fi":1.7,"note":null},{"n":"Mamão papaya","cat":"Fruta","kcal":43.0,"c":11.0,"p":0.5,"f":0.3,"su":7.8,"sat":0.03,"sa":0.0,"fi":1.7,"note":null},{"n":"Mandioca","cat":"Vegetal","kcal":125.0,"c":30.1,"p":0.6,"f":0.3,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Mandioca cozida","cat":"Vegetal","kcal":125.0,"c":30.0,"p":0.6,"f":0.3,"su":1.4,"sat":0.07,"sa":0.03,"fi":1.6,"note":null},{"n":"Manga","cat":"Fruta","kcal":60.0,"c":15.0,"p":0.8,"f":0.4,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Manga Congelada Sainsbury","cat":"Fruta","kcal":63.0,"c":13.6,"p":0.7,"f":0.2,"su":13.6,"sat":null,"sa":0.01,"fi":1.8,"note":null},{"n":"Manteiga","cat":"Gordura/Oleaginosa","kcal":717.0,"c":0.1,"p":0.9,"f":81.0,"su":0.1,"sat":51.0,"sa":1.5,"fi":0.0,"note":null},{"n":"Manteiga Lurpak","cat":"Gordura/Oleaginosa","kcal":739.0,"c":0.7,"p":0.6,"f":82.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Maple Syrup Organic Buckwud","cat":"Doce/Snack","kcal":271.0,"c":67.0,"p":0,"f":0,"su":64.0,"sat":null,"sa":0.03,"fi":0.0,"note":null},{"n":"Maple Syrup Sainsbury","cat":"Doce/Snack","kcal":281.0,"c":69.6,"p":0,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Mascarpone Sainsbury","cat":"Outros","kcal":412.0,"c":4.9,"p":3.6,"f":42.0,"su":4.6,"sat":null,"sa":0.13,"fi":0.0,"note":null},{"n":"Massa Podre","cat":"Outros","kcal":527.0,"c":48.0,"p":6.0,"f":35.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Mayonnaise Hellmans Light","cat":"Molho/Condimento","kcal":269.0,"c":6.1,"p":0,"f":26.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Mayonnaise M&S","cat":"Molho/Condimento","kcal":751.0,"c":1.6,"p":1.5,"f":82.0,"su":0.1,"sat":null,"sa":1.03,"fi":0.5,"note":null},{"n":"Meal Deal Chicken Bacon Wrap Tesco","cat":"Proteína","kcal":224.0,"c":21.3,"p":9.5,"f":12.8,"su":1.9,"sat":null,"sa":0.54,"fi":1.1,"note":null},{"n":"Medjool Dates So Organic Sainsbury","cat":"Doce/Snack","kcal":213.0,"c":46.9,"p":2.0,"f":0,"su":46.9,"sat":null,"sa":0.02,"fi":6.3,"note":null},{"n":"Mel","cat":"Doce/Snack","kcal":329.0,"c":81.5,"p":0,"f":0,"su":80.8,"sat":null,"sa":0.03,"fi":0.0,"note":null},{"n":"Mel Odisey","cat":"Doce/Snack","kcal":331.0,"c":83.0,"p":0,"f":0,"su":58.0,"sat":null,"sa":0.02,"fi":0.0,"note":null},{"n":"Melancia","cat":"Fruta","kcal":30.0,"c":7.6,"p":0.6,"f":0.2,"su":6.2,"sat":0.02,"sa":0.0,"fi":0.4,"note":null},{"n":"Melão","cat":"Fruta","kcal":36.0,"c":9.0,"p":0.5,"f":0.1,"su":8.0,"sat":null,"sa":0.0,"fi":0.8,"note":null},{"n":"Melona de Morango Mari","cat":"Fruta","kcal":70.2,"c":10.6,"p":3.3,"f":2.0,"su":6.6,"sat":null,"sa":0.0,"fi":1.4,"note":null},{"n":"Mexerica (pocan)","cat":"Fruta","kcal":53.0,"c":13.3,"p":0.8,"f":0.3,"su":10.6,"sat":0.04,"sa":0.0,"fi":1.8,"note":null},{"n":"Mezzelune Porcini and Truffle Carluccios","cat":"Outros","kcal":231.0,"c":24.4,"p":7.6,"f":10.4,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Mildreds - Salt & pepper tofu bokkeumbap","cat":"Leguminosa","kcal":400.0,"c":27.0,"p":7.0,"f":10.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Milho","cat":"Grão/Cereal","kcal":86.0,"c":19.0,"p":3.2,"f":1.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Millionaire Shortbread Costa","cat":"Pão/Massa","kcal":515.0,"c":52.8,"p":5.3,"f":32.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Mini Flatbread Crosta Mollica","cat":"Pão/Massa","kcal":299.0,"c":47.0,"p":8.9,"f":7.9,"su":2.4,"sat":null,"sa":1.5,"fi":2.0,"note":null},{"n":"Miso Organic Sainsbury","cat":"Outros","kcal":176.0,"c":16.0,"p":11.0,"f":7.0,"su":5.6,"sat":null,"sa":11.9,"fi":5.0,"note":null},{"n":"Missoshiro pronto +-","cat":"Outros","kcal":31.0,"c":2.03,"p":2.4,"f":1.27,"su":0.0,"sat":null,"sa":0.8,"fi":0.87,"note":null},{"n":"Mix seeds Sainsbury (pumpkin sunflower goji and cranberries)","cat":"Gordura/Oleaginosa","kcal":509.0,"c":30.5,"p":19.9,"f":32.8,"su":20.7,"sat":null,"sa":0.2,"fi":5.9,"note":null},{"n":"Mixed beans salad","cat":"Outros","kcal":88.0,"c":11.8,"p":6.1,"f":0.4,"su":0.6,"sat":null,"sa":0.0,"fi":6.1,"note":null},{"n":"Mochi Little Moons Salted Caramel","cat":"Doce/Snack","kcal":228.0,"c":38.0,"p":2.6,"f":7.3,"su":22.0,"sat":null,"sa":0.35,"fi":0.0,"note":"32g"},{"n":"Molho Gorgonzola Mari","cat":"Laticínio","kcal":341.0,"c":3.0,"p":7.6,"f":33.3,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Molho Sriracha","cat":"Molho/Condimento","kcal":95.0,"c":18.0,"p":1.3,"f":1.7,"su":18.0,"sat":null,"sa":5.1,"fi":1.4,"note":null},{"n":"Molho tomate","cat":"Vegetal","kcal":45.0,"c":6.7,"p":1.4,"f":1.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Morango","cat":"Fruta","kcal":33.0,"c":8.0,"p":0.7,"f":0.3,"su":4.9,"sat":null,"sa":0.0,"fi":2.0,"note":null},{"n":"Morango Congelado Sainsbury","cat":"Fruta","kcal":39.0,"c":6.1,"p":0.6,"f":0,"su":6.1,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Mortadela","cat":"Outros","kcal":311.0,"c":3.1,"p":16.0,"f":25.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Mostarda Dijon Maille","cat":"Molho/Condimento","kcal":151.0,"c":3.5,"p":3.5,"f":11.0,"su":1.9,"sat":null,"sa":4.9,"fi":0.0,"note":null},{"n":"Mostarda French's","cat":"Molho/Condimento","kcal":85.0,"c":1.2,"p":4.3,"f":4.4,"su":0.0,"sat":null,"sa":3.1,"fi":0.0,"note":null},{"n":"Mousse Chocolate Mari","cat":"Doce/Snack","kcal":155.4,"c":9.0,"p":8.6,"f":8.4,"su":7.6,"sat":null,"sa":0.3,"fi":2.7,"note":null},{"n":"Mousse Chocolate Tofu Chloe Vegan","cat":"Leguminosa","kcal":240.4,"c":9.8,"p":8.5,"f":13.3,"su":16.3,"sat":null,"sa":0.05,"fi":3.5,"note":null},{"n":"Mousse de Canela Mari","cat":"Outros","kcal":122.8,"c":7.2,"p":12.3,"f":4.4,"su":6.2,"sat":null,"sa":0.5,"fi":0.9,"note":null},{"n":"Mozzarella Fatia Waitrose","cat":"Laticínio","kcal":257.0,"c":0,"p":18.6,"f":20.3,"su":0.0,"sat":null,"sa":0.0,"fi":0.98,"note":null},{"n":"Mozzarella Italian Reduced Fat Waitrose","cat":"Laticínio","kcal":171.0,"c":0.7,"p":15.0,"f":12.0,"su":0.17,"sat":null,"sa":0.75,"fi":0.0,"note":null},{"n":"Mozzarella Italiana Galbani","cat":"Laticínio","kcal":238.0,"c":2.0,"p":17.0,"f":18.0,"su":1.0,"sat":null,"sa":0.7,"fi":0.0,"note":null},{"n":"Mozzarella Panini Galbani","cat":"Laticínio","kcal":249.0,"c":2.0,"p":22.0,"f":17.0,"su":0.2,"sat":null,"sa":1.1,"fi":0.0,"note":"aprox 21"},{"n":"Mozzarella Pearls Sainsbury","cat":"Laticínio","kcal":268.0,"c":0.9,"p":13.4,"f":23.4,"su":0.6,"sat":null,"sa":0.48,"fi":0.0,"note":null},{"n":"Mozzarella Pesto Marinated M&S","cat":"Laticínio","kcal":282.0,"c":1.1,"p":16.9,"f":23.1,"su":0.2,"sat":null,"sa":0.63,"fi":1.2,"note":null},{"n":"Mozzarella Sainsbury","cat":"Laticínio","kcal":298.0,"c":1.0,"p":25.5,"f":21.3,"su":1.0,"sat":null,"sa":1.28,"fi":0.2,"note":null},{"n":"Mozzarella Slices Lidl","cat":"Laticínio","kcal":309.0,"c":1.0,"p":25.7,"f":22.3,"su":0.5,"sat":null,"sa":1.5,"fi":0.0,"note":"25/slice (15 gord sat)"},{"n":"Mushroom Croquetas M&S","cat":"Vegetal","kcal":230.0,"c":18.1,"p":5.3,"f":14.7,"su":2.8,"sat":null,"sa":0.98,"fi":2.0,"note":"35g cada croqueta"},{"n":"Mussarela de Bufala","cat":"Laticínio","kcal":316.0,"c":6.6,"p":20.0,"f":24.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Natto","cat":"Outros","kcal":185.0,"c":7.6,"p":15.0,"f":9.1,"su":1.9,"sat":null,"sa":0.98,"fi":0.0,"note":null},{"n":"New York Bakery Bagel Sesame","cat":"Outros","kcal":266.0,"c":48.0,"p":9.3,"f":2.7,"su":2.4,"sat":null,"sa":0.6,"fi":3.0,"note":"85 per bagel"},{"n":"Noodles Medium Lidl","cat":"Pão/Massa","kcal":158.0,"c":30.4,"p":5.9,"f":1.0,"su":0.8,"sat":null,"sa":0.33,"fi":2.0,"note":"cooked"},{"n":"Nori","cat":"Outros","kcal":35.0,"c":5.0,"p":6.0,"f":0.3,"su":0.5,"sat":null,"sa":0.12,"fi":0.3,"note":null},{"n":"Noz","cat":"Gordura/Oleaginosa","kcal":654.0,"c":14.0,"p":15.0,"f":65.0,"su":2.6,"sat":6.1,"sa":0.0,"fi":6.7,"note":null},{"n":"Nóz Pecan","cat":"Gordura/Oleaginosa","kcal":689.0,"c":5.8,"p":9.0,"f":70.0,"su":4.3,"sat":null,"sa":0.0,"fi":10.0,"note":null},{"n":"Nozes","cat":"Gordura/Oleaginosa","kcal":607.0,"c":21.0,"p":20.0,"f":54.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Nush Creamy Almond Milk Spread Chive","cat":"Laticínio","kcal":208.0,"c":5.9,"p":7.2,"f":17.0,"su":0.7,"sat":null,"sa":0.7,"fi":0.0,"note":null},{"n":"Nutella","cat":"Outros","kcal":539.0,"c":57.5,"p":6.3,"f":30.9,"su":56.3,"sat":null,"sa":0.107,"fi":0.0,"note":null},{"n":"Nutritional Yeast Bosh!","cat":"Outros","kcal":334.0,"c":13.0,"p":51.0,"f":3.7,"su":0.05,"sat":null,"sa":0.36,"fi":22.0,"note":null},{"n":"Nutritional Yeast HB","cat":"Outros","kcal":359.0,"c":25.0,"p":49.0,"f":3.9,"su":0.0,"sat":null,"sa":0.45,"fi":15.0,"note":null},{"n":"Nutty Bites Tesco Mocha Flavour","cat":"Outros","kcal":411.0,"c":44.7,"p":11.0,"f":18.4,"su":31.4,"sat":null,"sa":0.18,"fi":11.2,"note":"9 each ball"},{"n":"Oat Bran Beta","cat":"Outros","kcal":364.0,"c":48.2,"p":16.0,"f":7.6,"su":1.5,"sat":null,"sa":0.02,"fi":19.4,"note":null},{"n":"Oat Cake Chocolate Chip Nairns","cat":"Doce/Snack","kcal":454.0,"c":63.8,"p":8.1,"f":16.9,"su":19.0,"sat":null,"sa":0.78,"fi":6.7,"note":null},{"n":"Oat Flour Doves Farm","cat":"Outros","kcal":361.0,"c":70.0,"p":12.0,"f":6.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Oat milk Califia Barista","cat":"Laticínio","kcal":54.0,"c":5.8,"p":0.8,"f":2.9,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Oatly oat milk barista","cat":"Laticínio","kcal":61.0,"c":7.1,"p":1.1,"f":3.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Oatly Whole Oat Drink","cat":"Outros","kcal":60.0,"c":7.1,"p":1.1,"f":2.8,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Óleo de soja","cat":"Gordura/Oleaginosa","kcal":884.0,"c":0.0,"p":0.0,"f":100.0,"su":0.0,"sat":15.0,"sa":0.0,"fi":0.0,"note":null},{"n":"Omelete simples","cat":"Proteína","kcal":154.0,"c":0.6,"p":11.0,"f":12.0,"su":0.6,"sat":3.5,"sa":0.45,"fi":0.0,"note":null},{"n":"Organic Peeled Plum Tomatoes in tomato juice","cat":"Vegetal","kcal":21.0,"c":3.1,"p":1.2,"f":0.3,"su":3.1,"sat":null,"sa":0.08,"fi":1.2,"note":null},{"n":"Ovo","cat":"Proteína","kcal":155.0,"c":1.1,"p":13.0,"f":11.0,"su":1.1,"sat":null,"sa":0.3,"fi":0.0,"note":null},{"n":"Ovo de galinha cozido","cat":"Proteína","kcal":155.0,"c":1.1,"p":13.0,"f":11.0,"su":1.1,"sat":3.3,"sa":0.35,"fi":0.0,"note":null},{"n":"Ovo frito","cat":"Proteína","kcal":196.0,"c":0.8,"p":13.6,"f":15.3,"su":0.8,"sat":4.0,"sa":0.4,"fi":0.0,"note":null},{"n":"Ovo mexido","cat":"Proteína","kcal":166.0,"c":2.2,"p":11.0,"f":12.0,"su":1.8,"sat":3.8,"sa":0.5,"fi":0.0,"note":null},{"n":"Paçoquita Santa Helena","cat":"Outros","kcal":520.0,"c":47.33,"p":17.33,"f":28.66,"su":null,"sat":null,"sa":null,"fi":null,"note":"15/20"},{"n":"Palmito","cat":"Outros","kcal":115.0,"c":26.0,"p":2.7,"f":0.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Panqueca aveia Mari","cat":"Grão/Cereal","kcal":238.0,"c":31.8,"p":11.4,"f":8.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Panqueca cacao sem gema Mari","cat":"Outros","kcal":161.9,"c":24.3,"p":10.7,"f":2.6,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pão","cat":"Pão/Massa","kcal":295.0,"c":48.2,"p":8.0,"f":7.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pão Burger Brioche St Pierre","cat":"Proteína","kcal":310.0,"c":52.0,"p":8.8,"f":6.9,"su":11.0,"sat":null,"sa":null,"fi":null,"note":"77 per bun"},{"n":"Pão de Beijo mamãe","cat":"Pão/Massa","kcal":313.0,"c":46.0,"p":1.1,"f":14.2,"su":null,"sat":null,"sa":null,"fi":null,"note":"39 cada bolinha"},{"n":"Pão de Hamburguer caseiro","cat":"Proteína","kcal":430.0,"c":63.98,"p":8.51,"f":14.94,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pão de Queijo","cat":"Laticínio","kcal":408.0,"c":45.0,"p":10.0,"f":21.0,"su":null,"sat":null,"sa":null,"fi":null,"note":"25 cada"},{"n":"Pão de queijo Rez (Eder)","cat":"Laticínio","kcal":315.0,"c":37.0,"p":4.7,"f":15.7,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pão Frances","cat":"Pão/Massa","kcal":310.0,"c":52.0,"p":11.0,"f":6.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pão integral","cat":"Pão/Massa","kcal":247.0,"c":41.0,"p":13.0,"f":3.4,"su":4.0,"sat":0.6,"sa":1.0,"fi":7.0,"note":null},{"n":"Pão Integral Fermentação Bauducco","cat":"Pão/Massa","kcal":254.0,"c":45.0,"p":9.7,"f":3.9,"su":null,"sat":null,"sa":null,"fi":null,"note":"25.0"},{"n":"Pão Jasons Sourdough 01","cat":"Pão/Massa","kcal":237.0,"c":46.4,"p":9.7,"f":0.7,"su":2.1,"sat":null,"sa":0.8,"fi":3.0,"note":"aprox 57/60 a fatia do meio"},{"n":"Pão Jasons Sourdough 07","cat":"Pão/Massa","kcal":233.0,"c":44.8,"p":9.3,"f":1.1,"su":2.6,"sat":null,"sa":0.87,"fi":3.6,"note":null},{"n":"Pão Sourdough","cat":"Pão/Massa","kcal":289.0,"c":56.0,"p":12.0,"f":1.8,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pão Sourdough Spelt Celtic Bakers","cat":"Pão/Massa","kcal":261.0,"c":55.5,"p":7.3,"f":1.9,"su":0.6,"sat":null,"sa":1.07,"fi":4.4,"note":null},{"n":"Pão Warburtons Seeded Batch","cat":"Pão/Massa","kcal":293.0,"c":39.7,"p":10.6,"f":8.9,"su":null,"sat":null,"sa":null,"fi":null,"note":"45,8 slice"},{"n":"Pão Warburtons Tiger Bloomer","cat":"Pão/Massa","kcal":251.0,"c":46.2,"p":10.1,"f":2.4,"su":null,"sat":null,"sa":null,"fi":null,"note":"37,5 per slice"},{"n":"Pao Warbutons Seeds","cat":"Pão/Massa","kcal":255.0,"c":40.1,"p":13.5,"f":3.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pão White Loaf Warbuton","cat":"Pão/Massa","kcal":104.0,"c":19.2,"p":3.8,"f":1.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pão Wickbold Integral Estar Leve","cat":"Pão/Massa","kcal":223.0,"c":40.0,"p":13.0,"f":1.2,"su":null,"sat":null,"sa":null,"fi":null,"note":"25.0"},{"n":"Parmeggiano Reggiano Italian M&S","cat":"Outros","kcal":402.0,"c":0,"p":32.4,"f":29.7,"su":0.0,"sat":null,"sa":1.6,"fi":0.0,"note":null},{"n":"Parsnip","cat":"Outros","kcal":90.0,"c":17.0,"p":0,"f":0.3,"su":4.8,"sat":null,"sa":0.0,"fi":3.6,"note":null},{"n":"Passionfruit","cat":"Fruta","kcal":97.0,"c":23.38,"p":2.2,"f":0.7,"su":11.2,"sat":null,"sa":0.0,"fi":10.4,"note":null},{"n":"Pasta de amendoim integral","cat":"Gordura/Oleaginosa","kcal":588.0,"c":20.0,"p":25.0,"f":50.0,"su":9.0,"sat":10.0,"sa":0.4,"fi":6.0,"note":null},{"n":"Pasta de Amendoim Meridiam Crunchy","cat":"Pão/Massa","kcal":606.0,"c":16.0,"p":26.0,"f":47.0,"su":5.3,"sat":null,"sa":0.02,"fi":8.1,"note":null},{"n":"Pasta de Amendoim Pip & Nut Smooth","cat":"Pão/Massa","kcal":593.0,"c":11.0,"p":27.0,"f":49.0,"su":6.6,"sat":null,"sa":0.45,"fi":7.49,"note":null},{"n":"Pasta de amendoim So Organic Sainsbury","cat":"Pão/Massa","kcal":622.0,"c":12.6,"p":28.0,"f":49.6,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pasta de Pistache Grape Tree","cat":"Pão/Massa","kcal":600.0,"c":28.0,"p":21.0,"f":45.0,"su":7.6,"sat":null,"sa":0.03,"fi":10.0,"note":null},{"n":"Pasta Rigatoni Plants Red Lentil","cat":"Pão/Massa","kcal":345.0,"c":64.0,"p":17.0,"f":1.0,"su":1.4,"sat":null,"sa":0.4,"fi":4.9,"note":"100g cru"},{"n":"Pasta Sauce Filippo Berio Basilico","cat":"Pão/Massa","kcal":66.0,"c":4.7,"p":1.2,"f":4.5,"su":4.2,"sat":null,"sa":1.1,"fi":0.8,"note":null},{"n":"Pastel Massa","cat":"Outros","kcal":280.0,"c":20.0,"p":0,"f":20.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Patinho cozido","cat":"Proteína","kcal":219.0,"c":0.0,"p":35.0,"f":7.5,"su":0.0,"sat":3.0,"sa":0.1,"fi":0.0,"note":null},{"n":"Peach and Nectarine slices Sainsbury","cat":"Doce/Snack","kcal":42.0,"c":8.1,"p":1.2,"f":0,"su":8.1,"sat":null,"sa":0.0,"fi":1.8,"note":null},{"n":"Peanuts Nori Wasabi Koh-Kae","cat":"Gordura/Oleaginosa","kcal":516.0,"c":41.8,"p":21.3,"f":26.8,"su":13.6,"sat":null,"sa":1.4,"fi":5.5,"note":null},{"n":"Peito de frango grelhado","cat":"Proteína","kcal":165.0,"c":0.0,"p":31.0,"f":3.6,"su":0.0,"sat":1.0,"sa":0.19,"fi":0.0,"note":null},{"n":"Peito de peru fatiado","cat":"Proteína","kcal":104.0,"c":1.2,"p":17.0,"f":3.0,"su":1.0,"sat":0.9,"sa":2.2,"fi":0.0,"note":null},{"n":"Peixe Cod","cat":"Proteína","kcal":82.0,"c":0,"p":18.0,"f":0.7,"su":0.0,"sat":null,"sa":0.23,"fi":0.0,"note":null},{"n":"Peixe Saint Peter","cat":"Proteína","kcal":96.0,"c":0,"p":20.1,"f":1.7,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Penne de Arroz","cat":"Grão/Cereal","kcal":355.0,"c":78.8,"p":7.1,"f":1.5,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Penne Red Lentil Sainsbury (cooked)","cat":"Outros","kcal":159.0,"c":23.8,"p":12.4,"f":0.8,"su":0.6,"sat":null,"sa":0.0,"fi":3.6,"note":null},{"n":"Pepino","cat":"Vegetal","kcal":15.0,"c":3.6,"p":0.65,"f":0.1,"su":1.6,"sat":null,"sa":0.0,"fi":0.5,"note":null},{"n":"Pera","cat":"Fruta","kcal":57.0,"c":15.0,"p":0.4,"f":0.1,"su":9.8,"sat":0.02,"sa":0.0,"fi":3.1,"note":null},{"n":"Pêssego","cat":"Outros","kcal":40.0,"c":9.5,"p":0.6,"f":0.3,"su":8.4,"sat":null,"sa":0.0,"fi":1.5,"note":null},{"n":"Pesto Manjericão","cat":"Molho/Condimento","kcal":520.0,"c":4.9,"p":17.6,"f":46.0,"su":null,"sat":null,"sa":null,"fi":null,"note":"30.0"},{"n":"Piadina Integral Crosta Molica","cat":"Outros","kcal":229.0,"c":35.0,"p":5.9,"f":6.4,"su":0.8,"sat":null,"sa":1.2,"fi":3.4,"note":"per piadina"},{"n":"Pimentão","cat":"Vegetal","kcal":20.0,"c":4.6,"p":0.9,"f":0.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pimento Ginger Beer","cat":"Bebida","kcal":30.0,"c":7.1,"p":0,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":"250 btl"},{"n":"Pine nuts","cat":"Outros","kcal":673.0,"c":13.0,"p":14.0,"f":68.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pinhão","cat":"Outros","kcal":175.0,"c":33.24,"p":3.62,"f":0.75,"su":10.0,"sat":null,"sa":0.0,"fi":15.6,"note":null},{"n":"Pip & Nut Hazelnut","cat":"Gordura/Oleaginosa","kcal":623.0,"c":19.0,"p":15.0,"f":52.0,"su":9.1,"sat":null,"sa":0.8,"fi":8.8,"note":null},{"n":"Pipoca","cat":"Outros","kcal":375.0,"c":74.0,"p":11.0,"f":4.3,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pipoca poppers salt and pepper","cat":"Vegetal","kcal":447.0,"c":50.0,"p":8.9,"f":21.0,"su":1.4,"sat":null,"sa":1.1,"fi":13.0,"note":null},{"n":"Pipoca Proper Sweet and Salty","cat":"Outros","kcal":465.0,"c":56.5,"p":7.6,"f":20.4,"su":11.3,"sat":null,"sa":0.66,"fi":12.6,"note":null},{"n":"Pipoca Tesco Sweet and Salty","cat":"Outros","kcal":506.0,"c":58.5,"p":6.0,"f":26.2,"su":22.6,"sat":null,"sa":1.19,"fi":6.0,"note":null},{"n":"Pistacchio Butter Mari 1","cat":"Gordura/Oleaginosa","kcal":425.2,"c":18.1,"p":13.8,"f":33.1,"su":4.9,"sat":null,"sa":0.13,"fi":6.5,"note":null},{"n":"Pistacchio Butter Mari 2","cat":"Gordura/Oleaginosa","kcal":304.7,"c":14.8,"p":10.9,"f":22.4,"su":4.7,"sat":null,"sa":0.1,"fi":4.4,"note":null},{"n":"Pistache shelled M&S","cat":"Outros","kcal":589.0,"c":7.5,"p":26.4,"f":48.0,"su":5.9,"sat":null,"sa":0.05,"fi":10.6,"note":null},{"n":"Pistachio and Caramel Bar M&S","cat":"Gordura/Oleaginosa","kcal":561.0,"c":43.8,"p":8.6,"f":38.0,"su":41.6,"sat":null,"sa":0.58,"fi":4.6,"note":"36g barra"},{"n":"Pistachio Creme M&S","cat":"Gordura/Oleaginosa","kcal":576.0,"c":48.6,"p":9.2,"f":37.6,"su":48.6,"sat":null,"sa":0.18,"fi":3.1,"note":null},{"n":"Pita Bread","cat":"Pão/Massa","kcal":275.0,"c":56.0,"p":9.0,"f":1.2,"su":1.5,"sat":null,"sa":1.34,"fi":2.2,"note":null},{"n":"Pita without Gluten Bfree","cat":"Outros","kcal":237.0,"c":48.0,"p":3.7,"f":1.8,"su":1.8,"sat":null,"sa":0.91,"fi":7.4,"note":null},{"n":"Pizza Crosta Mollica Fiorentina","cat":"Prato pronto","kcal":230.0,"c":29.0,"p":8.8,"f":8.4,"su":1.6,"sat":null,"sa":1.1,"fi":1.8,"note":null},{"n":"Pizza Express Beetroot and Goat Cheese Salad","cat":"Laticínio","kcal":594.0,"c":46.3,"p":19.0,"f":36.4,"su":20.2,"sat":null,"sa":3.17,"fi":9.9,"note":null},{"n":"Pizza Express Leggera Pomodoro","cat":"Prato pronto","kcal":573.0,"c":95.4,"p":23.3,"f":8.5,"su":10.8,"sat":null,"sa":3.16,"fi":7.1,"note":"Pizza inteira aprox 350"},{"n":"Pizza Hut Pepperoni Cheese Bites","cat":"Laticínio","kcal":255.0,"c":26.3,"p":12.3,"f":11.4,"su":2.4,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pizza Pilgrim Mush & truffle","cat":"Prato pronto","kcal":946.0,"c":40.0,"p":10.0,"f":20.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pizza Waitrose Woodfire Mushroom and Truffle Sourdough","cat":"Pão/Massa","kcal":246.0,"c":30.7,"p":8.9,"f":9.2,"su":2.4,"sat":null,"sa":0.85,"fi":2.4,"note":"440 inteira"},{"n":"Polenta Valsugana","cat":"Grão/Cereal","kcal":355.0,"c":77.0,"p":7.2,"f":1.2,"su":0.4,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Polvilho Azedo","cat":"Outros","kcal":360.0,"c":90.0,"p":0,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Polvilho Doce","cat":"Doce/Snack","kcal":355.0,"c":90.0,"p":0,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Pomegranate","cat":"Outros","kcal":55.0,"c":11.8,"p":1.3,"f":0,"su":11.8,"sat":null,"sa":0.0,"fi":0.6,"note":null},{"n":"Powdered PB chocolate HB","cat":"Doce/Snack","kcal":375.0,"c":28.0,"p":45.0,"f":6.0,"su":19.0,"sat":null,"sa":1.2,"fi":14.0,"note":null},{"n":"Powdered PB peanut HB","cat":"Gordura/Oleaginosa","kcal":398.0,"c":26.0,"p":48.0,"f":9.0,"su":17.0,"sat":null,"sa":0.84,"fi":10.0,"note":null},{"n":"Powdered PB Vilgain","cat":"Outros","kcal":387.0,"c":18.4,"p":47.0,"f":14.0,"su":2.0,"sat":null,"sa":0.03,"fi":0.0,"note":null},{"n":"Prawns Atlantic Peeled Prawns M&S","cat":"Outros","kcal":72.0,"c":0,"p":17.7,"f":0.1,"su":0.0,"sat":null,"sa":1.4,"fi":0.0,"note":null},{"n":"Presunto magro","cat":"Proteína","kcal":145.0,"c":1.5,"p":18.0,"f":7.0,"su":0.5,"sat":2.5,"sa":2.0,"fi":0.0,"note":null},{"n":"Pretzel Baked Sour Cream and Chive M&S","cat":"Outros","kcal":418.0,"c":73.5,"p":10.0,"f":8.6,"su":5.9,"sat":null,"sa":1.08,"fi":3.4,"note":null},{"n":"Pringles Sourcream","cat":"Outros","kcal":519.0,"c":54.0,"p":6.2,"f":30.0,"su":2.1,"sat":null,"sa":0.62,"fi":4.2,"note":null},{"n":"Prosciutto di Parma Parma Waitrose","cat":"Outros","kcal":243.0,"c":0.7,"p":29.1,"f":13.8,"su":0.0,"sat":null,"sa":5.27,"fi":0.0,"note":null},{"n":"Prosecco Italiano Waitrose","cat":"Outros","kcal":85.0,"c":0,"p":0,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Protein Ball Roasted Peanuts DeliciousElla","cat":"Gordura/Oleaginosa","kcal":375.0,"c":44.0,"p":12.0,"f":13.0,"su":39.0,"sat":null,"sa":0.8,"fi":15.0,"note":null},{"n":"Proteina Pulsin Pea","cat":"Outros","kcal":406.0,"c":0.2,"p":80.0,"f":9.1,"su":0.0,"sat":null,"sa":0.15,"fi":0.24,"note":"(10g)"},{"n":"Proteína Vegana Dux Baunilha","cat":"Molho/Condimento","kcal":423.0,"c":11.15,"p":76.92,"f":8.07,"su":null,"sat":null,"sa":null,"fi":null,"note":"26.0"},{"n":"Psyllium","cat":"Outros","kcal":360.0,"c":88.9,"p":0,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Puck requeijão","cat":"Laticínio","kcal":324.0,"c":1.5,"p":8.8,"f":31.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Purê de Batata Doce","cat":"Vegetal","kcal":114.0,"c":17.5,"p":1.7,"f":4.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Queijo Brie Le Rustique","cat":"Laticínio","kcal":342.0,"c":1.0,"p":17.0,"f":30.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Queijo Cheddar","cat":"Laticínio","kcal":414.0,"c":1.6,"p":24.9,"f":34.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Queijo Cheddar Extra Mature Tesco","cat":"Laticínio","kcal":416.0,"c":0.1,"p":25.4,"f":34.9,"su":0.1,"sat":null,"sa":1.81,"fi":0.0,"note":"25 fatia"},{"n":"Queijo Emmental Sainsbury","cat":"Laticínio","kcal":364.0,"c":0,"p":28.0,"f":28.0,"su":0.0,"sat":null,"sa":0.6,"fi":0.0,"note":null},{"n":"Queijo Gouda","cat":"Laticínio","kcal":356.0,"c":2.2,"p":25.0,"f":27.0,"su":2.2,"sat":null,"sa":2.04,"fi":0.0,"note":null},{"n":"Queijo Gruyere M&S","cat":"Laticínio","kcal":400.0,"c":1.0,"p":27.0,"f":32.0,"su":0.0,"sat":null,"sa":1.48,"fi":0.0,"note":null},{"n":"Queijo Light LeerDammer","cat":"Laticínio","kcal":262.0,"c":0,"p":30.0,"f":16.0,"su":0.0,"sat":null,"sa":1.5,"fi":0.0,"note":"20g slice"},{"n":"Queijo Mild Cheddar So Organic","cat":"Laticínio","kcal":416.0,"c":0.5,"p":25.4,"f":34.9,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Queijo Minas","cat":"Laticínio","kcal":264.0,"c":3.2,"p":17.4,"f":20.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Queijo minas frescal","cat":"Laticínio","kcal":264.0,"c":3.0,"p":17.4,"f":20.2,"su":1.0,"sat":12.0,"sa":1.2,"fi":0.0,"note":null},{"n":"Queijo Mussarela","cat":"Laticínio","kcal":280.0,"c":3.1,"p":28.0,"f":17.0,"su":null,"sat":null,"sa":null,"fi":null,"note":"20.0"},{"n":"Queijo Parmesão","cat":"Laticínio","kcal":431.0,"c":4.1,"p":38.0,"f":29.0,"su":0.9,"sat":null,"sa":3.8,"fi":0.0,"note":null},{"n":"Queijo Pecorino Romano Waitrose","cat":"Laticínio","kcal":401.0,"c":0,"p":26.0,"f":36.0,"su":0.0,"sat":null,"sa":4.8,"fi":0.0,"note":null},{"n":"Queijo Prato","cat":"Laticínio","kcal":373.33,"c":0,"p":21.66,"f":31.66,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Queijo Provolone","cat":"Proteína","kcal":352.0,"c":2.1,"p":26.0,"f":27.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Queijo The Laughing Cow","cat":"Laticínio","kcal":228.0,"c":6.0,"p":11.5,"f":17.5,"su":6.0,"sat":null,"sa":1.7,"fi":0.0,"note":"-16.7"},{"n":"Quiabo","cat":"Outros","kcal":33.0,"c":7.5,"p":1.9,"f":0.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Quiche broccoli spinach ricotta","cat":"Vegetal","kcal":212.0,"c":14.7,"p":8.4,"f":13.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Quiche Lorraine Waitrose","cat":"Outros","kcal":251.0,"c":16.2,"p":15.8,"f":10.7,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Quinoa Laila Crua","cat":"Grão/Cereal","kcal":349.0,"c":57.0,"p":11.0,"f":2.8,"su":1.9,"sat":null,"sa":0.01,"fi":6.1,"note":null},{"n":"Ramen pronto starry mart","cat":"Outros","kcal":60.0,"c":9.0,"p":2.3,"f":1.5,"su":1.2,"sat":null,"sa":0.8,"fi":0.6,"note":null},{"n":"Ready Meal Braised Steak M&S Count on Us","cat":"Prato pronto","kcal":72.0,"c":7.1,"p":6.8,"f":1.5,"su":1.6,"sat":null,"sa":0.33,"fi":1.2,"note":"380.0"},{"n":"Red Sockeye Wil Pacific Oak Smoked Salmon","cat":"Proteína","kcal":110.0,"c":0.1,"p":23.2,"f":1.8,"su":0.0,"sat":null,"sa":3.23,"fi":0.2,"note":null},{"n":"Red Velvet Cake M&S","cat":"Outros","kcal":442.0,"c":51.6,"p":4.6,"f":24.0,"su":38.0,"sat":null,"sa":0.43,"fi":0.0,"note":null},{"n":"Repolho","cat":"Outros","kcal":25.0,"c":6.0,"p":1.3,"f":0.1,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Requeijão cremoso","cat":"Laticínio","kcal":257.0,"c":3.0,"p":9.0,"f":23.0,"su":3.0,"sat":15.0,"sa":1.0,"fi":0.0,"note":null},{"n":"Requeijão Scala","cat":"Laticínio","kcal":267.0,"c":0,"p":11.6,"f":24.6,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Rice Cake Be Good to yourself white n brown","cat":"Grão/Cereal","kcal":388.0,"c":81.5,"p":8.1,"f":2.4,"su":0.2,"sat":null,"sa":0.0,"fi":3.9,"note":"7,5 per cake"},{"n":"Rice cake Kallo organic","cat":"Grão/Cereal","kcal":394.0,"c":82.3,"p":8.5,"f":2.7,"su":0.5,"sat":null,"sa":0.0,"fi":0.3,"note":null},{"n":"Rice cake snack a Jacks Salt and Vinegar","cat":"Grão/Cereal","kcal":413.0,"c":78.0,"p":8.5,"f":5.8,"su":1.3,"sat":null,"sa":1.3,"fi":3.9,"note":"10,5 cada"},{"n":"Rice choc mini cake sainsbury","cat":"Doce/Snack","kcal":484.0,"c":67.2,"p":7.9,"f":19.9,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Rice noodles sainsbury","cat":"Pão/Massa","kcal":134.0,"c":28.9,"p":0,"f":2.4,"su":0.0,"sat":null,"sa":0.0,"fi":1.9,"note":null},{"n":"Rice Paper","cat":"Doce/Snack","kcal":336.0,"c":80.3,"p":1.6,"f":0.6,"su":0.4,"sat":null,"sa":1.7,"fi":0.7,"note":"aprox 9g folha"},{"n":"Ricotta 1 Sainsbury","cat":"Outros","kcal":105.0,"c":3.0,"p":7.6,"f":7.0,"su":2.6,"sat":null,"sa":0.26,"fi":0.0,"note":null},{"n":"Ricotta M&S","cat":"Outros","kcal":136.0,"c":3.8,"p":7.1,"f":10.2,"su":3.8,"sat":null,"sa":0.5,"fi":0.2,"note":null},{"n":"Roasted British Chicken Slices M&S","cat":"Proteína","kcal":134.0,"c":0,"p":29.5,"f":1.8,"su":0.0,"sat":null,"sa":0.53,"fi":0.0,"note":null},{"n":"Rocket Salad","cat":"Outros","kcal":25.0,"c":3.7,"p":2.6,"f":0.7,"su":2.1,"sat":null,"sa":0.0,"fi":1.6,"note":null},{"n":"Ryvita Crispbread original","cat":"Pão/Massa","kcal":355.0,"c":69.0,"p":10.5,"f":1.1,"su":2.4,"sat":null,"sa":0.75,"fi":13.4,"note":"10,5 cada"},{"n":"Ryvita Multigrain Crispbread","cat":"Pão/Massa","kcal":354.0,"c":55.7,"p":12.8,"f":5.1,"su":3.7,"sat":null,"sa":0.61,"fi":17.2,"note":"10,5g per slice"},{"n":"Sal","cat":"Outros","kcal":0.0,"c":0,"p":0,"f":0,"su":0.0,"sat":null,"sa":100.0,"fi":0.0,"note":null},{"n":"Salada alfaces e cenoura","cat":"Vegetal","kcal":23.0,"c":3.1,"p":0.8,"f":0.3,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Salada Bistro M&S","cat":"Outros","kcal":34.0,"c":5.2,"p":1.8,"f":0.3,"su":4.4,"sat":null,"sa":0.18,"fi":1.5,"note":null},{"n":"Salada Crisp Tesco","cat":"Outros","kcal":52.0,"c":3.8,"p":3.7,"f":1.9,"su":3.0,"sat":null,"sa":0.02,"fi":2.6,"note":null},{"n":"Salada Crispy","cat":"Outros","kcal":18.0,"c":0.9,"p":1.5,"f":0.3,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Salada Pea Shots","cat":"Outros","kcal":34.0,"c":2.2,"p":4.9,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Salmão","cat":"Proteína","kcal":208.0,"c":0,"p":20.0,"f":13.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Salmão cru","cat":"Proteína","kcal":208.0,"c":0,"p":20.0,"f":13.0,"su":0.0,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Salmão grelhado","cat":"Proteína","kcal":206.0,"c":0.0,"p":22.0,"f":13.0,"su":0.0,"sat":3.1,"sa":0.1,"fi":0.0,"note":null},{"n":"Salmão Smoked Sainsbury Trimmings","cat":"Proteína","kcal":177.0,"c":1.0,"p":24.1,"f":8.4,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Salmon Honey M&S","cat":"Proteína","kcal":221.0,"c":3.1,"p":24.6,"f":12.2,"su":2.1,"sat":null,"sa":1.08,"fi":0.0,"note":null},{"n":"Salmon Scottish Calledonian Fillet M&S","cat":"Proteína","kcal":245.0,"c":0,"p":21.1,"f":17.8,"su":0.0,"sat":null,"sa":0.2,"fi":0.2,"note":null},{"n":"Salsa per Pizza M&S","cat":"Prato pronto","kcal":78.0,"c":13.6,"p":2.0,"f":1.5,"su":11.9,"sat":null,"sa":0.83,"fi":0.9,"note":null},{"n":"Sardinha em lata","cat":"Proteína","kcal":208.0,"c":0.0,"p":24.6,"f":11.5,"su":0.0,"sat":3.0,"sa":0.5,"fi":0.0,"note":null},{"n":"Scottish Salmon Tesco Finest","cat":"Proteína","kcal":184.0,"c":1.4,"p":22.7,"f":9.6,"su":0.4,"sat":null,"sa":3.21,"fi":0.5,"note":null},{"n":"Seaweed Itsu Sea Salt","cat":"Outros","kcal":490.0,"c":6.0,"p":30.0,"f":34.0,"su":0.0,"sat":null,"sa":2.8,"fi":21.0,"note":null},{"n":"Semente de abóbora","cat":"Vegetal","kcal":446.0,"c":54.0,"p":19.0,"f":19.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Semolina","cat":"Outros","kcal":357.0,"c":74.0,"p":12.0,"f":1.2,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Shitake Taste the Difference","cat":"Outros","kcal":44.0,"c":6.2,"p":2.4,"f":0,"su":0.0,"sat":null,"sa":0.02,"fi":3.1,"note":null},{"n":"Shoyu","cat":"Molho/Condimento","kcal":53.0,"c":4.9,"p":8.0,"f":0.6,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Single Cream Sainsbury","cat":"Outros","kcal":194.0,"c":2.2,"p":3.3,"f":19.1,"su":2.2,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Skimmed Milk Powder Marvel","cat":"Laticínio","kcal":346.0,"c":50.3,"p":34.9,"f":0.6,"su":49.8,"sat":null,"sa":1.3,"fi":0.0,"note":null},{"n":"Sliced White Mushrooms Sainsbury","cat":"Vegetal","kcal":8.0,"c":0,"p":1.0,"f":0,"su":0.0,"sat":null,"sa":0.0,"fi":0.7,"note":null},{"n":"Smint Sugar Free XXL","cat":"Doce/Snack","kcal":236.0,"c":97.0,"p":0,"f":0.3,"su":0.0,"sat":null,"sa":0.11,"fi":0.0,"note":null},{"n":"Smoked Salmon Mild Delicate M&S","cat":"Proteína","kcal":179.0,"c":0,"p":22.4,"f":9.8,"su":0.0,"sat":null,"sa":2.88,"fi":0.6,"note":null},{"n":"Snack 'n' Jack Caramel","cat":"Doce/Snack","kcal":386.0,"c":86.0,"p":6.1,"f":1.7,"su":19.0,"sat":null,"sa":0.49,"fi":11.0,"note":"13g each"},{"n":"Snack 'n' Jack Chocolate Chips","cat":"Doce/Snack","kcal":386.0,"c":73.0,"p":6.1,"f":5.7,"su":20.0,"sat":null,"sa":0.06,"fi":9.9,"note":null},{"n":"Sockeye Salmon Leap","cat":"Proteína","kcal":157.0,"c":0.1,"p":25.9,"f":5.7,"su":0.1,"sat":null,"sa":0.08,"fi":0.83,"note":null},{"n":"Sorvete de Banana Cacao Mari","cat":"Fruta","kcal":139.5,"c":23.6,"p":7.7,"f":1.8,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Sorvete de Banana Mari","cat":"Fruta","kcal":117.0,"c":23.8,"p":5.8,"f":0.8,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Sorvete de Blueberry Mari","cat":"Fruta","kcal":69.5,"c":7.5,"p":9.0,"f":0.3,"su":7.4,"sat":null,"sa":0.07,"fi":1.1,"note":null},{"n":"Sorvete de Doce de Leite Mari","cat":"Laticínio","kcal":271.888,"c":28.58,"p":4.242,"f":15.568,"su":28.531,"sat":null,"sa":0.081,"fi":0.041,"note":null},{"n":"Sorvete Mari Frutas Vermelhas e Yogurt","cat":"Laticínio","kcal":56.0,"c":7.6,"p":5.2,"f":0.3,"su":6.2,"sat":null,"sa":0.2,"fi":2.0,"note":null},{"n":"Sorvete Morango Mari","cat":"Fruta","kcal":65.0,"c":5.21,"p":8.7,"f":0,"su":5.21,"sat":null,"sa":0.04,"fi":0.0,"note":null},{"n":"Sorvete Remeo Pistacchio","cat":"Doce/Snack","kcal":132.0,"c":17.0,"p":2.8,"f":5.6,"su":13.0,"sat":null,"sa":0.2,"fi":0.5,"note":null},{"n":"Sorvete Yeo Valley Vanilla Organic","cat":"Doce/Snack","kcal":135.0,"c":11.3,"p":2.7,"f":8.8,"su":11.3,"sat":null,"sa":0.1,"fi":0.0,"note":null},{"n":"Soup - Calabrian Mushroom and Truffle Soup","cat":"Vegetal","kcal":96.0,"c":1.5,"p":1.2,"f":9.1,"su":0.9,"sat":null,"sa":0.7,"fi":1.4,"note":null},{"n":"Sour Cream","cat":"Outros","kcal":193.0,"c":2.9,"p":2.1,"f":20.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Southern Chicken Tesco","cat":"Proteína","kcal":247.0,"c":12.9,"p":19.6,"f":12.6,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Soy Salmon Edamame Beans The Cook Kitchen","cat":"Proteína","kcal":169.0,"c":16.3,"p":10.3,"f":6.0,"su":2.4,"sat":null,"sa":0.59,"fi":2.0,"note":null},{"n":"Spinachi Ricotta Torteloni","cat":"Vegetal","kcal":184.0,"c":30.2,"p":7.3,"f":3.4,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Sponge Fingers Waitrose","cat":"Outros","kcal":399.0,"c":82.7,"p":7.2,"f":3.9,"su":52.1,"sat":null,"sa":0.12,"fi":2.1,"note":null},{"n":"Sriracha Chilli Nut Selection","cat":"Outros","kcal":618.0,"c":14.8,"p":20.5,"f":51.1,"su":5.8,"sat":null,"sa":0.93,"fi":8.5,"note":null},{"n":"Sunflower Oil So Organic","cat":"Gordura/Oleaginosa","kcal":829.0,"c":0,"p":0,"f":92.1,"su":0.0,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Sweet Freedom choc pot spread","cat":"Molho/Condimento","kcal":270.0,"c":44.0,"p":3.2,"f":8.0,"su":37.0,"sat":null,"sa":0.4,"fi":7.8,"note":null},{"n":"Sweet Peppers Sainsbury","cat":"Vegetal","kcal":26.0,"c":4.1,"p":0.8,"f":0,"su":4.1,"sat":null,"sa":0.0,"fi":1.0,"note":null},{"n":"Tagliatelle Fresh Tesco","cat":"Pão/Massa","kcal":145.0,"c":28.3,"p":4.6,"f":1.2,"su":0.2,"sat":null,"sa":0.01,"fi":1.4,"note":null},{"n":"Taioba","cat":"Outros","kcal":33.0,"c":5.5,"p":2.9,"f":0.9,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Tâmara","cat":"Doce/Snack","kcal":282.0,"c":75.0,"p":2.5,"f":0.4,"su":null,"sat":null,"sa":null,"fi":null,"note":"20.0"},{"n":"Tangerina","cat":"Fruta","kcal":53.0,"c":13.0,"p":0.8,"f":0.3,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Tapioca","cat":"Outros","kcal":130.0,"c":22.0,"p":2.0,"f":3.9,"su":15.0,"sat":null,"sa":0.36,"fi":0.0,"note":null},{"n":"Tapioca (goma hidratada)","cat":"Grão/Cereal","kcal":240.0,"c":60.0,"p":0.2,"f":0.1,"su":0.1,"sat":0.0,"sa":0.0,"fi":0.9,"note":null},{"n":"Tapioca Lopes","cat":"Outros","kcal":225.0,"c":55.8,"p":0,"f":0,"su":0.0,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Tesco Calorie Control Chicken Mushroom Potato","cat":"Proteína","kcal":79.0,"c":7.2,"p":8.4,"f":1.6,"su":1.7,"sat":null,"sa":0.25,"fi":1.2,"note":null},{"n":"Tesco Finest Chicken Truffle Mayo wrap","cat":"Proteína","kcal":273.0,"c":26.1,"p":7.8,"f":14.8,"su":3.6,"sat":null,"sa":0.51,"fi":1.9,"note":null},{"n":"The Cook Kitchen Halloumi and Roasted Vegetable Pasta","cat":"Pão/Massa","kcal":92.0,"c":13.1,"p":4.6,"f":2.7,"su":4.3,"sat":null,"sa":0.47,"fi":0.0,"note":null},{"n":"The Cook Kitchen Teriaki Chicken Noodles","cat":"Proteína","kcal":111.0,"c":12.6,"p":7.0,"f":3.1,"su":4.5,"sat":null,"sa":0.47,"fi":2.7,"note":null},{"n":"Tilápia grelhada","cat":"Proteína","kcal":128.0,"c":0.0,"p":26.0,"f":2.7,"su":0.0,"sat":0.9,"sa":0.08,"fi":0.0,"note":null},{"n":"Tim Tam biscoito chocolate","cat":"Pão/Massa","kcal":525.0,"c":65.7,"p":4.2,"f":26.9,"su":45.5,"sat":null,"sa":0.33,"fi":1.6,"note":"18.1"},{"n":"Tiramisu","cat":"Outros","kcal":400.0,"c":30.0,"p":6.0,"f":20.0,"su":14.0,"sat":null,"sa":0.5,"fi":0.2,"note":null},{"n":"Tiramisu Mari 1","cat":"Outros","kcal":355.0,"c":32.6,"p":6.1,"f":22.3,"su":24.7,"sat":null,"sa":0.2,"fi":0.5,"note":null},{"n":"Tofu","cat":"Leguminosa","kcal":76.0,"c":1.9,"p":8.0,"f":4.8,"su":0.0,"sat":null,"sa":0.0,"fi":0.3,"note":null},{"n":"Tofu firme","cat":"Leguminosa","kcal":144.0,"c":2.8,"p":15.0,"f":8.7,"su":0.6,"sat":1.3,"sa":0.01,"fi":2.3,"note":null},{"n":"Tofu So Organic Sainsbury super firm","cat":"Leguminosa","kcal":118.0,"c":1.8,"p":11.9,"f":6.8,"su":0.0,"sat":null,"sa":0.03,"fi":1.1,"note":null},{"n":"Tomate","cat":"Vegetal","kcal":18.0,"c":3.9,"p":0.9,"f":0.2,"su":2.6,"sat":null,"sa":0.0,"fi":1.2,"note":null},{"n":"Tomate cereja","cat":"Vegetal","kcal":25.0,"c":6.0,"p":1.0,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Tomato Soup M&S Italian Collection","cat":"Vegetal","kcal":91.0,"c":6.8,"p":1.5,"f":6.3,"su":4.1,"sat":null,"sa":0.7,"fi":0.5,"note":null},{"n":"Tortilla Chips Lanchito","cat":"Pão/Massa","kcal":479.0,"c":67.0,"p":6.3,"f":20.0,"su":2.4,"sat":null,"sa":0.75,"fi":0.0,"note":null},{"n":"Tuna Chunks Princes Sunflower Oil","cat":"Gordura/Oleaginosa","kcal":180.0,"c":0,"p":23.5,"f":9.5,"su":0.0,"sat":null,"sa":0.9,"fi":0.0,"note":null},{"n":"Tuna Lidl Spring Water","cat":"Outros","kcal":109.0,"c":0,"p":25.9,"f":0.6,"su":0.0,"sat":null,"sa":0.9,"fi":0.0,"note":null},{"n":"Tuna Steaks Sunflower Oil Lidl","cat":"Gordura/Oleaginosa","kcal":155.0,"c":0,"p":29.2,"f":4.6,"su":0.0,"sat":null,"sa":0.52,"fi":0.6,"note":null},{"n":"Tuna Yellowfin","cat":"Outros","kcal":124.0,"c":0.45,"p":27.6,"f":1.2,"su":0.45,"sat":null,"sa":0.11,"fi":0.5,"note":null},{"n":"Turrón Duro Almendro","cat":"Outros","kcal":563.0,"c":45.0,"p":13.0,"f":35.0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Tyrrell's Veg Crisp","cat":"Outros","kcal":522.0,"c":42.0,"p":5.1,"f":34.5,"su":23.5,"sat":null,"sa":1.1,"fi":11.3,"note":null},{"n":"Uva","cat":"Fruta","kcal":69.0,"c":18.0,"p":0.7,"f":0.2,"su":16.0,"sat":0.05,"sa":0.0,"fi":0.9,"note":null},{"n":"Uva passa","cat":"Fruta","kcal":299.0,"c":79.0,"p":3.1,"f":0.5,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Uva Verde thompson","cat":"Fruta","kcal":40.0,"c":10.0,"p":0.5,"f":0.1,"su":15.2,"sat":null,"sa":0.0,"fi":0.7,"note":null},{"n":"Vadasz Super Beet Kimchi","cat":"Vegetal","kcal":22.0,"c":1.7,"p":1.0,"f":0.3,"su":0.0,"sat":null,"sa":2.4,"fi":4.0,"note":null},{"n":"Vegetable Powder Bouillon","cat":"Outros","kcal":241.0,"c":30.6,"p":9.6,"f":8.4,"su":3.9,"sat":null,"sa":43.8,"fi":0.0,"note":null},{"n":"Veloforte Crunch Bar Peanut & Sea Salt","cat":"Gordura/Oleaginosa","kcal":385.0,"c":25.0,"p":29.6,"f":14.2,"su":12.1,"sat":null,"sa":0.79,"fi":17.8,"note":null},{"n":"Vinho","cat":"Bebida","kcal":83.0,"c":2.7,"p":0.1,"f":0,"su":0.8,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Vinho Branco Casillero Chardonnay","cat":"Bebida","kcal":101.0,"c":0,"p":0,"f":0,"su":0.0,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Vinho Oranje Cape Town","cat":"Bebida","kcal":72.0,"c":2.7,"p":0.1,"f":0,"su":0.8,"sat":null,"sa":0.0,"fi":0.0,"note":null},{"n":"Weetabix","cat":"Outros","kcal":362.0,"c":69.0,"p":12.0,"f":2.0,"su":4.2,"sat":null,"sa":0.28,"fi":10.0,"note":null},{"n":"Whey baunilha essential nutrition","cat":"Suplemento","kcal":333.33,"c":19.0,"p":73.33,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":"30.0"},{"n":"Whey cacau essential nutrition","cat":"Suplemento","kcal":346.66,"c":15.0,"p":73.33,"f":2.33,"su":null,"sat":null,"sa":null,"fi":null,"note":"30.0"},{"n":"Whey My Protein Isolate - Choc Brownie","cat":"Suplemento","kcal":353.0,"c":6.6,"p":77.0,"f":1.3,"su":1.7,"sat":null,"sa":0.6,"fi":3.6,"note":"25.0"},{"n":"Whey My Protein Natural Vanilla","cat":"Suplemento","kcal":358.0,"c":2.4,"p":86.0,"f":0.5,"su":2.4,"sat":null,"sa":0.5,"fi":0.0,"note":null},{"n":"Whey protein (pó)","cat":"Suplemento","kcal":400.0,"c":8.0,"p":75.0,"f":6.0,"su":4.0,"sat":3.0,"sa":0.5,"fi":0.0,"note":null},{"n":"Whey Protein Cinnamon Roll Vilgain","cat":"Suplemento","kcal":391.0,"c":8.8,"p":75.1,"f":6.0,"su":7.4,"sat":null,"sa":0.4,"fi":0.8,"note":null},{"n":"Whey Protein Hazelnut Vilgain","cat":"Suplemento","kcal":395.0,"c":9.7,"p":74.0,"f":6.4,"su":8.4,"sat":null,"sa":0.45,"fi":1.1,"note":null},{"n":"Whey Protein Raspberry Lemonade My Protein Clear","cat":"Suplemento","kcal":331.0,"c":3.1,"p":79.0,"f":0,"su":0.5,"sat":null,"sa":0.09,"fi":0.0,"note":null},{"n":"Whey Protein Vanilla Vilgain","cat":"Suplemento","kcal":389.0,"c":7.3,"p":76.2,"f":6.1,"su":7.3,"sat":null,"sa":0.4,"fi":0.0,"note":null},{"n":"Whipping Cream Sainsbury","cat":"Outros","kcal":374.0,"c":2.6,"p":2.0,"f":39.5,"su":2.6,"sat":null,"sa":0.06,"fi":0.3,"note":null},{"n":"Wild Rocket Tesco","cat":"Outros","kcal":22.0,"c":0.6,"p":3.5,"f":0.1,"su":0.2,"sat":null,"sa":0.23,"fi":2.1,"note":null},{"n":"Wrap Carb Lite Deli Kitchen","cat":"Pão/Massa","kcal":254.0,"c":29.3,"p":13.8,"f":6.5,"su":1.6,"sat":null,"sa":0.99,"fi":12.0,"note":"50g per wrap"},{"n":"Wrap halloumi and falafel hot to go m&s","cat":"Leguminosa","kcal":262.0,"c":0,"p":8.1,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Wrap Integral Wickbold","cat":"Pão/Massa","kcal":259.0,"c":43.0,"p":12.0,"f":4.3,"su":null,"sat":null,"sa":null,"fi":null,"note":"30.0"},{"n":"Wrap Mini","cat":"Pão/Massa","kcal":97.0,"c":16.6,"p":2.5,"f":2.1,"su":null,"sat":null,"sa":null,"fi":null,"note":"Per wrap"},{"n":"Wrap Mini Tesco","cat":"Pão/Massa","kcal":284.0,"c":49.7,"p":8.2,"f":5.0,"su":2.2,"sat":null,"sa":null,"fi":null,"note":"31.0"},{"n":"Wrap Mission Carb Lite","cat":"Pão/Massa","kcal":249.0,"c":17.9,"p":14.7,"f":7.1,"su":0.9,"sat":null,"sa":1.1,"fi":27.5,"note":null},{"n":"Wrap Waitrose","cat":"Pão/Massa","kcal":297.0,"c":52.5,"p":7.2,"f":5.8,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Yeo Valley Cream of tomato","cat":"Vegetal","kcal":45.0,"c":4.9,"p":0.7,"f":2.3,"su":3.9,"sat":null,"sa":0.42,"fi":0.8,"note":null},{"n":"Yogurt 0% Yeo Valley Organic","cat":"Laticínio","kcal":57.0,"c":3.5,"p":10.0,"f":0.5,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Yogurt Alpro Vanilla","cat":"Laticínio","kcal":66.0,"c":7.5,"p":3.7,"f":2.2,"su":7.5,"sat":null,"sa":0.2,"fi":0.9,"note":null},{"n":"Yogurt Atilatte Desnatado","cat":"Laticínio","kcal":34.7,"c":4.7,"p":3.4,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Yogurt Fage 0% Fat","cat":"Laticínio","kcal":54.0,"c":3.0,"p":10.3,"f":0,"su":3.0,"sat":null,"sa":0.1,"fi":0.0,"note":null},{"n":"Yogurt Fage 5% Fat","cat":"Laticínio","kcal":93.0,"c":3.0,"p":9.0,"f":5.0,"su":3.0,"sat":null,"sa":0.1,"fi":0.0,"note":null},{"n":"Yogurt Lidl 0%","cat":"Laticínio","kcal":50.0,"c":4.1,"p":8.3,"f":0,"su":4.0,"sat":null,"sa":0.15,"fi":0.0,"note":null},{"n":"Yogurt Lidl Fat Free","cat":"Laticínio","kcal":68.0,"c":9.2,"p":7.0,"f":0.2,"su":9.2,"sat":null,"sa":0.15,"fi":0.0,"note":null},{"n":"Yogurt M&S 0% Fat Greek Style Natural Yogurt","cat":"Laticínio","kcal":64.0,"c":8.0,"p":7.0,"f":0.4,"su":8.0,"sat":null,"sa":0.18,"fi":0.0,"note":null},{"n":"Yogurt Waitrose Low Fat","cat":"Laticínio","kcal":69.0,"c":6.6,"p":4.9,"f":2.6,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Yorgus 0%","cat":"Outros","kcal":58.0,"c":3.0,"p":11.5,"f":0,"su":3.0,"sat":null,"sa":0.2,"fi":0.0,"note":null},{"n":"Yorgus Grego Baunilha","cat":"Molho/Condimento","kcal":104.61,"c":10.0,"p":9.23,"f":3.07,"su":null,"sat":null,"sa":null,"fi":null,"note":"130.0"},{"n":"Yorgus Grego Mel","cat":"Doce/Snack","kcal":72.0,"c":8.0,"p":10.0,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null},{"n":"Yorkshire Pudding","cat":"Doce/Snack","kcal":197.0,"c":14.5,"p":7.0,"f":12.0,"su":2.0,"sat":null,"sa":0.3,"fi":0.7,"note":null},{"n":"Yourgus Natural","cat":"Outros","kcal":58.46,"c":3.07,"p":11.53,"f":0,"su":null,"sat":null,"sa":null,"fi":null,"note":null}];
+const MEALS=[{nm:"Café da manhã",ic:"☕"},{nm:"Lanche",ic:"🍎"},{nm:"Almoço",ic:"🍽️"},{nm:"Café",ic:"🫖"},{nm:"Jantar",ic:"🌙"},{nm:"Ceia",ic:"🌜"}];
+const MEAL_CATS=[
+ ["Fruta","Laticínio","Grão/Cereal","Pão/Massa","Gordura/Oleaginosa","Proteína","Doce/Snack","Bebida"],
+ ["Fruta","Laticínio","Gordura/Oleaginosa","Doce/Snack","Suplemento","Pão/Massa"],
+ ["Proteína","Leguminosa","Grão/Cereal","Vegetal","Prato pronto"],
+ ["Pão/Massa","Doce/Snack","Laticínio","Fruta","Bebida","Gordura/Oleaginosa"],
+ ["Proteína","Vegetal","Leguminosa","Grão/Cereal","Prato pronto"],
+ ["Laticínio","Fruta","Suplemento","Gordura/Oleaginosa"]
+];
+const GOAL_LABEL={perder:"perder gordura",manter:"manter peso",ganhar:"ganhar massa"};
+
+let state={
+  goal:"perder",note:"",kcal:1500,bmr:1320,
+  pct:{c:44,p:28,f:28},
+  lim:{sugarPct:10,salt:5,fiber:25},
+  days:null, activeDate:null, lastMeal:1, histMetric:"kcal",
+  foods:null, view:"day", aiEndpoint:"", aiProvider:"claude", gemKey:"", gemModel:"gemini-2.5-flash",
+  supaUrl:"", supaKey:""
+};
+const KEY="macroapp_v2";
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}scheduleSync();}
+function load(){try{const s=localStorage.getItem(KEY);if(s){const o=JSON.parse(s);if(o)state=Object.assign(state,o);}}catch(e){}}
+if(!state.foods) state.foods=DEFAULT_FOODS.map(f=>Object.assign({},f));
+
+const $=s=>document.querySelector(s);
+const r0=n=>Math.round(n||0);
+const r1=n=>Math.round((n||0)*10)/10;
+const norm=s=>(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const findFood=nm=>state.foods.find(f=>f.n===nm);
+const CATS=()=>[...new Set(state.foods.map(f=>f.cat||"Outros"))].sort();
+const PEND_FIELDS=[["su","açúcar"],["sa","sal"],["fi","fibra"]];
+const missingOf=f=>PEND_FIELDS.filter(([k])=>f[k]==null).map(([,l])=>l);
+const isPending=f=>missingOf(f).length>0;
+const pendCount=()=>state.foods.filter(isPending).length;
+const WD=["dom","seg","ter","qua","qui","sex","sáb"], MO=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+function todayStr(d){d=d||new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function emptyMeals(){return [[],[],[],[],[],[]];}
+function ensureDay(date){if(!state.days)state.days={};if(!state.days[date])state.days[date]={meals:emptyMeals()};return state.days[date];}
+function dm(){return ensureDay(state.activeDate).meals;}
+function dateLabel(ds){const [y,m,d]=ds.split("-").map(Number);const dt=new Date(y,m-1,d);return `${WD[dt.getDay()]} ${String(d).padStart(2,"0")} ${MO[m-1]}`;}
+function parseDate(ds){const [y,m,d]=ds.split("-").map(Number);return new Date(y,m-1,d);}
+function shiftDate(delta){const dt=parseDate(state.activeDate);dt.setDate(dt.getDate()+delta);state.activeDate=todayStr(dt);state.adding=null;render();}
+function dayTotalsFor(date){const day=state.days&&state.days[date];let t={kcal:0,c:0,p:0,fat:0,su:0,sa:0,fi:0};
+  if(day)day.meals.forEach(m=>m.forEach(it=>{const x=itemMac(it);for(const k in t)t[k]+=x[k];}));return t;}
+function migrateState(){
+  if(state.meals&&!state.days){state.days={};state.days[state.activeDate||todayStr()]={meals:state.meals};}
+  delete state.meals;
+  if(!state.days)state.days={};
+  if(!state.activeDate)state.activeDate=todayStr();
+  if(!state.lim)state.lim={sugarPct:10,salt:5,fiber:25};
+  if(!state.foods)state.foods=DEFAULT_FOODS.map(f=>Object.assign({},f));
+  ensureDay(state.activeDate);
+}
+
+function itemMac(it){const f=findFood(it.name);if(!f)return{kcal:0,c:0,p:0,fat:0,su:0,sa:0,fi:0};const k=it.grams/100;
+  return{kcal:f.kcal*k,c:f.c*k,p:f.p*k,fat:f.f*k,su:(f.su||0)*k,sa:(f.sa||0)*k,fi:(f.fi||0)*k};}
+function dayTotals(){let t={kcal:0,c:0,p:0,fat:0,su:0,sa:0,fi:0};
+  dm().forEach(m=>m.forEach(it=>{const x=itemMac(it);for(const k in t)t[k]+=x[k];}));return t;}
+function targets(){const k=state.kcal||0;return{kcal:k,c:k*(state.pct.c/100)/4,p:k*(state.pct.p/100)/4,fat:k*(state.pct.f/100)/9,
+  sugar:k*(state.lim.sugarPct/100)/4,salt:state.lim.salt,fiber:state.lim.fiber};}
+function defGrams(f){if(f&&f.note){const m=String(f.note).replace(",",".").match(/(\d+(\.\d+)?)/);if(m){const v=parseFloat(m[1]);if(v>=5&&v<=600)return r0(v);}}return 100;}
+
+/* ---------- render root ---------- */
+function render(){
+  $("#goalSub").textContent=GOAL_LABEL[state.goal]+(state.note?" · "+state.note:"");
+  $("#navDay").classList.toggle("on",state.view==="day");
+  $("#navLib").classList.toggle("on",state.view==="lib");
+  $("#navHist").classList.toggle("on",state.view==="hist");
+  $("#navAcct").classList.toggle("on",state.view==="acct");
+  $("#viewDay").classList.toggle("hidden",state.view!=="day");
+  $("#viewLib").classList.toggle("hidden",state.view!=="lib");
+  $("#viewHist").classList.toggle("hidden",state.view!=="hist");
+  $("#viewAcct").classList.toggle("hidden",state.view!=="acct");
+  if(state.view==="day"){renderDateBar();renderDash();renderSug();renderMeals();renderFoot();}
+  else if(state.view==="lib")renderLib();
+  else if(state.view==="hist")renderHist();
+  else renderAcct();
+  save();
+}
+function renderDateBar(){
+  const today=todayStr(),isT=state.activeDate===today;
+  $("#dateLabel").textContent=isT?"Hoje · "+dateLabel(state.activeDate):dateLabel(state.activeDate);
+  $("#dateNext").disabled=isT;
+  $("#dateToday").classList.toggle("hidden",isT);
+}
+
+/* ---------- dashboard ---------- */
+function renderDash(){
+  const t=dayTotals(),g=targets(),left=g.kcal-t.kcal;
+  $("#hMeta").innerHTML=g.kcal.toLocaleString("pt-BR")+"<small> kcal</small>";
+  $("#hCons").innerHTML=r0(t.kcal).toLocaleString("pt-BR")+"<small> kcal</small>";
+  $("#hBmr").innerHTML=(state.bmr||0).toLocaleString("pt-BR")+"<small> kcal</small>";
+  const def=(state.kcal||0)-(state.bmr||0);
+  $("#hDef").innerHTML=(def<0?"−"+Math.abs(def):def)+"<small> kcal</small>";
+  $("#hKcalLeft").textContent=r0(Math.abs(left)).toLocaleString("pt-BR");
+  $("#hKcalLbl").textContent=left>=0?"kcal restantes":"kcal acima";
+  const ring=$("#ring"),C=339.3,frac=g.kcal>0?Math.min(t.kcal/g.kcal,1):0;
+  ring.style.strokeDashoffset=C*(1-frac);
+  ring.setAttribute("stroke",left<0?"var(--over)":"var(--prot)");
+  const M=[["carb","Carboidrato",t.c,g.c],["prot","Proteína",t.p,g.p],["fat","Gordura",t.fat,g.fat]];
+  $("#macros").innerHTML=M.map(([cls,nm,cur,tg])=>{const pct=tg>0?cur/tg*100:0,over=cur>tg+0.5,lf=tg-cur;
+    return `<div class="macro ${cls}"><div class="row"><span class="nm">${nm}</span><span class="amt num">${r0(cur)} / ${r0(tg)} g</span></div>
+      <div class="track"><div class="fill ${over?'over':''}" style="width:${Math.min(pct,100)}%"></div></div>
+      <div class="left ${over?'over':''}">${over?"passou "+r0(-lf)+" g":"faltam "+r0(lf)+" g"}</div></div>`;}).join("");
+  const mic=[["sugar","Açúcar",t.su,g.sugar,"limite"],["salt","Sal",t.sa,g.salt,"limite"],["fiber","Fibra",t.fi,g.fiber,"meta"]];
+  $("#micros").innerHTML=mic.map(([cls,nm,cur,tg,kind])=>{const pct=tg>0?cur/tg*100:0;
+    let st,cl;
+    if(kind==="limite"){const over=cur>tg;st=over?"passou "+r1(cur-tg)+" g do limite":"dentro · sobram "+r1(tg-cur)+" g";cl=over?"over":"ok";}
+    else{const ok=cur>=tg;st=ok?"meta atingida ✓":"faltam "+r1(tg-cur)+" g";cl=ok?"ok":"";}
+    return `<div class="micro ${cls}"><div class="row"><span class="nm">${nm}</span><span class="amt num">${r1(cur)} / ${r1(tg)} g</span></div>
+      <div class="t2"><div class="f2" style="width:${Math.min(pct,100)}%;${kind==='limite'&&cur>tg?'background:var(--over)':''}"></div></div>
+      <div class="st ${cl}">${st}</div></div>`;}).join("");
+  const missing=pendCount();
+  $("#microcap").innerHTML="Açúcar e sal são limites (quanto menos, melhor); fibra é meta. "+(missing?`<b style="color:var(--carb-ink)">${missing} alimento${missing>1?"s":""}</b> ainda sem açúcar/sal/fibra — veja em Biblioteca › Pendentes.`:"Todos os alimentos usados têm esses dados.");
+}
+
+/* ---------- meals + picker ---------- */
+let curQuery="",curCat="all",curPick=null,hlIdx=-1;
+function renderMeals(){
+  const host=$("#meals");host.innerHTML="";const D=dm();
+  MEALS.forEach((Mn,i)=>{
+    let mt={kcal:0,c:0,p:0,fat:0};D[i].forEach(it=>{const x=itemMac(it);mt.kcal+=x.kcal;mt.c+=x.c;mt.p+=x.p;mt.fat+=x.fat;});
+    const card=document.createElement("div");card.className="card meal";
+    let h=`<div class="head"><div class="l"><div class="ic">${Mn.ic}</div><div><div class="nm">${Mn.nm}</div>
+      <div class="meta">${D[i].length?D[i].length+" item"+(D[i].length>1?"s":"")+" · "+r0(mt.c)+"C "+r0(mt.p)+"P "+r0(mt.fat)+"G":"vazio"}</div></div></div>
+      <div class="kc num">${r0(mt.kcal)}<small> kcal</small></div></div>`;
+    if(D[i].length){h+=`<div class="items">`+D[i].map((it,j)=>{const x=itemMac(it);
+      return `<div class="item"><div class="info"><div class="iname">${it.name}</div>
+        <div class="imac"><b class="dotc">${r0(x.c)}C</b> · <b class="dotp">${r0(x.p)}P</b> · <b class="dotf">${r0(x.fat)}G</b></div></div>
+        <input class="gin num" type="number" inputmode="numeric" value="${it.grams}" data-g="${i}-${j}"><span class="unit">g</span>
+        <div class="ikc num">${r0(x.kcal)}</div><button class="del" data-del="${i}-${j}" aria-label="remover">✕</button></div>`;}).join("")+`</div>`;}
+    h+= state.adding===i ? pickerHTML() : `<button class="addbtn" data-add="${i}"><span class="plus">+</span> adicionar alimento</button>`;
+    card.innerHTML=h;host.appendChild(card);
+  });
+  wireMeals();
+  if(state.adding!=null){const s=$("#searchInput");if(s){s.focus();showResults();}}
+}
+function pickerHTML(){
+  const cats=CATS();
+  const chips=`<button class="chip ${curCat==='all'?'on':''}" data-chip="all">Todas</button>`+cats.map(c=>`<button class="chip ${curCat===c?'on':''}" data-chip="${c}">${c}</button>`).join("");
+  return `<div class="picker">
+    <input class="search" id="searchInput" placeholder="Buscar entre ${state.foods.length} alimentos…" autocomplete="off">
+    <div class="chips">${chips}</div>
+    <div class="results" id="results"></div>
+    <div id="pickedWrap"></div>
+    <div style="margin-top:11px"><button class="btn sec" data-cancel="1">Cancelar</button></div></div>`;
+}
+function wireMeals(){
+  document.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{state.adding=+b.dataset.add;curPick=null;curQuery="";curCat="all";hlIdx=-1;renderMeals();});
+  document.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>{state.adding=null;render();});
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const[i,j]=b.dataset.del.split("-").map(Number);dm()[i].splice(j,1);render();});
+  document.querySelectorAll("[data-g]").forEach(inp=>inp.onchange=()=>{const[i,j]=inp.dataset.g.split("-").map(Number);dm()[i][j].grams=parseFloat(inp.value)||0;render();});
+  document.querySelectorAll("[data-chip]").forEach(c=>c.onclick=()=>{curCat=c.dataset.chip;hlIdx=-1;document.querySelectorAll("[data-chip]").forEach(x=>x.classList.toggle("on",x.dataset.chip===curCat));showResults();});
+  const s=$("#searchInput");
+  if(s){s.value=curQuery;
+    s.oninput=()=>{curQuery=s.value;hlIdx=-1;showResults();};
+    s.onkeydown=e=>{const res=document.querySelectorAll(".res[data-pick]");
+      if(e.key==="ArrowDown"){e.preventDefault();hlIdx=Math.min(hlIdx+1,res.length-1);markHl();}
+      else if(e.key==="ArrowUp"){e.preventDefault();hlIdx=Math.max(hlIdx-1,0);markHl();}
+      else if(e.key==="Enter"){e.preventDefault();if(hlIdx>=0&&res[hlIdx])res[hlIdx].click();}
+      else if(e.key==="Escape"){state.adding=null;render();}};
+    renderPicked();}
+}
+function markHl(){const res=document.querySelectorAll(".res[data-pick]");res.forEach((r,i)=>r.classList.toggle("hl",i===hlIdx));if(res[hlIdx])res[hlIdx].scrollIntoView({block:"nearest"});}
+function matchFoods(){const q=norm(curQuery);
+  let pool=state.foods.filter(f=>curCat==="all"||f.cat===curCat);
+  if(!q)return pool.slice(0,200);
+  const st=[],ot=[];for(const f of pool){const n=norm(f.n);if(n.startsWith(q))st.push(f);else if(n.includes(q))ot.push(f);}
+  return st.concat(ot).slice(0,200);}
+function showResults(){const box=$("#results");if(!box)return;const list=matchFoods(),q=norm(curQuery);
+  if(!list.length){box.innerHTML=`<div class="res" style="color:var(--muted);cursor:default">Nada encontrado.</div>`;return;}
+  box.innerHTML=list.map(f=>`<div class="res" data-pick="${f.n.replace(/"/g,'&quot;')}"><div class="rl"><div class="rn">${hi(f.n,q)}</div><div class="rcat">${f.cat||"Outros"}</div></div><div class="rk num">${r0(f.kcal)}<br>kcal/100g</div></div>`).join("");
+  box.querySelectorAll("[data-pick]").forEach(el=>el.onclick=()=>{const f=findFood(el.dataset.pick);curPick={f,grams:defGrams(f)};curQuery=f.n;const s=$("#searchInput");if(s)s.value=f.n;renderPicked();$("#pickedWrap").scrollIntoView({block:"nearest"});});
+}
+function hi(name,q){const n=norm(name);const i=n.indexOf(q);if(i<0||!q)return name;return name.slice(0,i)+"<mark>"+name.slice(i,i+q.length)+"</mark>"+name.slice(i+q.length);}
+function macLine(f,k){return `= <b class="num">${r0(f.kcal*k)}</b> kcal · <b class="dotc num">${r0(f.c*k)}C</b> · <b class="dotp num">${r0(f.p*k)}P</b> · <b class="dotf num">${r0(f.f*k)}G</b>`+
+  (f.su!=null?` · <span style="color:var(--sugar-ink)">${r1(f.su*k)}açúc</span>`:"")+(f.fi!=null?` · <span style="color:var(--fiber-ink)">${r1(f.fi*k)}fib</span>`:"");}
+function renderPicked(){const w=$("#pickedWrap");if(!w)return;if(!curPick){w.innerHTML="";return;}
+  const f=curPick.f,k=curPick.grams/100;
+  w.innerHTML=`<div class="picked"><span class="pn">${f.n}</span><input id="pGrams" type="number" inputmode="numeric" value="${curPick.grams}"><span class="unit">g</span><button class="btn" id="pAdd">Adicionar</button></div>
+    <div class="sgm" style="margin-top:7px;padding-left:2px" id="pLine">${macLine(f,k)}${f.note?` · <span style="color:var(--faint)">${f.note}</span>`:""}</div>`;
+  $("#pGrams").oninput=e=>{curPick.grams=parseFloat(e.target.value)||0;$("#pLine").innerHTML=macLine(f,curPick.grams/100)+(f.note?` · <span style="color:var(--faint)">${f.note}</span>`:"");};
+  $("#pAdd").onclick=()=>{dm()[state.adding].push({name:f.n,grams:curPick.grams||100});state.lastMeal=state.adding;state.adding=null;curPick=null;curQuery="";render();};
+}
+
+/* ---------- heuristic suggestions ---------- */
+function remaining(){const t=dayTotals(),g=targets();return{kcal:g.kcal-t.kcal,c:g.c-t.c,p:g.p-t.p,fat:g.fat-t.fat,g};}
+function suggestions(){const t=dayTotals(),g=targets();const rem={kcal:g.kcal-t.kcal,c:g.c-t.c,p:g.p-t.p,fat:g.fat-t.fat};
+  if(rem.kcal<=15)return{done:true,rem};
+  const gap={c:g.c>0?Math.max(rem.c,0)/g.c:0,p:g.p>0?Math.max(rem.p,0)/g.p:0,fat:g.fat>0?Math.max(rem.fat,0)/g.fat:0};
+  const prio=gap.p>=gap.c&&gap.p>=gap.fat?"p":(gap.c>=gap.fat?"c":"fat");
+  const W=state.goal==="perder"?{p:1.6,c:0.9,fat:0.8,suP:1.3,dP:1.1}:state.goal==="ganhar"?{p:1.2,c:1.2,fat:1.0,suP:0.4,dP:0.4}:{p:1.2,c:1.0,fat:1.0,suP:0.8,dP:0.7};
+  const sc=[];
+  for(const f of state.foods){if(f.kcal<=4)continue;const per=prio==="p"?f.p:prio==="c"?f.c:f.f;if(per<=0.5)continue;
+    let gr=(Math.max(rem[prio],0)*0.45)/(per/100);gr=Math.max(15,Math.min(gr,300));let k=gr/100,kc=f.kcal*k;
+    if(kc>rem.kcal){gr=gr*(rem.kcal/kc);k=gr/100;kc=f.kcal*k;}if(gr<8)continue;
+    const cc=f.c*k,pp=f.p*k,ff=f.f*k,su=(f.su||0)*k;
+    const fP=rem.p>0?Math.min(pp,rem.p)/g.p:0,fC=rem.c>0?Math.min(cc,rem.c)/g.c:0,fF=rem.fat>0?Math.min(ff,rem.fat)/g.fat:0;
+    const ov=Math.max(0,pp-rem.p)/Math.max(g.p,1)+Math.max(0,cc-rem.c)/Math.max(g.c,1)+Math.max(0,ff-rem.fat)/Math.max(g.fat,1);
+    let s=fP*W.p+fC*W.c+fF*W.fat-ov*1.2-(su*0.01)*W.suP-(f.kcal/100*0.12)*W.dP;
+    if(prio==="p")s+=(f.p/Math.max(f.kcal,1))*4;
+    sc.push({f,grams:r0(gr),kc,cc,pp,ff,score:s});}
+  sc.sort((a,b)=>b.score-a.score);
+  const out=[],used=new Set();for(const s of sc){const key=norm(s.f.n).split(" ")[0];if(used.has(key)&&out.length>=2)continue;used.add(key);out.push(s);if(out.length>=4)break;}
+  return{done:false,rem,prio,list:out};
+}
+function renderSug(){
+  const sel=$("#sugMeal");if(sel.options.length===0)sel.innerHTML=MEALS.map((m,i)=>`<option value="${i}">→ ${m.nm}</option>`).join("");
+  sel.value=state.lastMeal;sel.onchange=()=>{state.lastMeal=+sel.value;};
+  const r=suggestions(),hint=$("#sugHint"),listEl=$("#sugList");
+  $("#aiBox").classList.add("hidden");
+  if(r.done){hint.innerHTML="Meta de calorias atingida. 🎉";listEl.innerHTML=`<div class="noplan">Você fechou o orçamento de hoje.</div>`;$("#aiBtn").disabled=true;return;}
+  $("#aiBtn").disabled=false;
+  const pn={p:"proteína",c:"carboidrato",fat:"gordura"}[r.prio];
+  hint.innerHTML=`Priorizando <b>${pn}</b> · cabem <b class="num">${r0(r.rem.kcal)}</b> kcal · faltam <b class="dotc num">${r0(Math.max(r.rem.c,0))}C</b> <b class="dotp num">${r0(Math.max(r.rem.p,0))}P</b> <b class="dotf num">${r0(Math.max(r.rem.fat,0))}G</b>`;
+  if(!r.list.length){listEl.innerHTML=`<div class="noplan">Sem boa sugestão dentro das calorias — talvez hora de fechar o dia.</div>`;return;}
+  listEl.innerHTML=r.list.map((s,idx)=>sgRow(s.f.n,s.grams,s.kc,s.cc,s.pp,s.ff,null,"h"+idx)).join("");
+  wireSgAdd(listEl,r.list.map(s=>({name:s.f.n,grams:s.grams})));
+}
+function sgRow(name,grams,kc,cc,pp,ff,reason,id){
+  return `<div class="sg"><div class="sgi"><div class="sgn">${name} · <span class="num">${grams} g</span></div>
+    <div class="sgm"><span class="num">${r0(kc)}</span> kcal · <b class="dotc num">${r0(cc)}C</b> · <b class="dotp num">${r0(pp)}P</b> · <b class="dotf num">${r0(ff)}G</b></div>
+    ${reason?`<div class="sgreason">${reason}</div>`:""}</div>
+    <button class="sgadd" data-sgadd="${id}">Adicionar</button></div>`;
+}
+function wireSgAdd(root,items){root.querySelectorAll("[data-sgadd]").forEach((b,i)=>b.onclick=()=>{const it=items[i];const m=+$("#sugMeal").value;dm()[m].push({name:it.name,grams:it.grams});state.lastMeal=m;render();});}
+
+/* ---------- AI suggestions ---------- */
+function aiCandidates(mealIdx,rem){
+  const cats=MEAL_CATS[mealIdx];
+  let pool=state.foods.filter(f=>cats.includes(f.cat)&&f.kcal>4);
+  if(pool.length<25)pool=state.foods.filter(f=>f.kcal>4);
+  const scored=pool.map(f=>{const k=Math.min(150,Math.max(20,(rem.kcal*0.4)/(f.kcal/100||1)))/100;
+    const pp=f.p*k,cc=f.c*k,ff=f.f*k;
+    const fit=(rem.p>0?Math.min(pp,rem.p):0)+(rem.c>0?Math.min(cc,rem.c):0)*0.6+(rem.fat>0?Math.min(ff,rem.fat):0)*0.6;
+    return{f,fit};}).sort((a,b)=>b.fit-a.fit).slice(0,42).map(x=>x.f);
+  return scored;
+}
+async function aiCall(sys,user){
+  if(state.aiProvider==="gemini"&&state.gemKey&&state.gemKey.trim()){
+    const model=(state.gemModel||"gemini-2.5-flash").trim();
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(state.gemKey.trim())}`;
+    const resp=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:{temperature:0.4,responseMimeType:"application/json"}})});
+    if(!resp.ok)throw new Error("gemini "+resp.status);
+    const data=await resp.json();
+    return ((((data.candidates||[])[0]||{}).content||{}).parts||[]).map(p=>p.text||"").join("");
+  }
+  const endpoint=(state.aiEndpoint&&state.aiEndpoint.trim())||"https://api.anthropic.com/v1/messages";
+  const resp=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:sys,messages:[{role:"user",content:user}]})});
+  if(!resp.ok)throw new Error("status "+resp.status);
+  const data=await resp.json();
+  return (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+}
+async function aiSuggest(){
+  const mealIdx=+$("#sugMeal").value, meal=MEALS[mealIdx].nm;
+  const r=remaining(),box=$("#aiBox");
+  box.classList.remove("hidden");
+  box.innerHTML=`<div class="aitag">✨ IA · ${meal}</div><div class="noplan">Pensando em opções pra ${meal.toLowerCase()}…</div>`;
+  const cands=aiCandidates(mealIdx,r);
+  const list=cands.map(f=>({n:f.n,kcal:f.kcal,c:f.c,p:f.p,f:f.f,su:f.su,fi:f.fi}));
+  const sys="Você é nutricionista pragmática. Responda APENAS com um objeto JSON válido, sem markdown, sem texto fora do JSON.";
+  const user=`Objetivo do usuário: ${GOAL_LABEL[state.goal]}${state.note?" ("+state.note+")":""}.
+Refeição atual: "${meal}". Sugira itens TÍPICOS e apropriados para esta refeição.
+Faltam hoje no total: ${r0(r.kcal)} kcal, ${r0(Math.max(r.c,0))}g carboidrato, ${r0(Math.max(r.p,0))}g proteína, ${r0(Math.max(r.fat,0))}g gordura.
+Escolha 3 itens APENAS desta lista (use o nome EXATO em "name"), defina as gramas (porção realista) e dê um motivo curto (máx 12 palavras) ligado à natureza da refeição e ao objetivo.
+Não estoure as ${r0(r.kcal)} kcal restantes somando os 3 itens. Valores são por 100g.
+Lista: ${JSON.stringify(list)}
+Responda exatamente: {"suggestions":[{"name":"...","grams":0,"reason":"..."}]}`;
+  try{
+    let txt=(await aiCall(sys,user)).trim();
+    txt=txt.replace(/^```json/i,"").replace(/^```/,"").replace(/```$/,"").trim();
+    const parsed=JSON.parse(txt);
+    const sug=(parsed.suggestions||[]).map(s=>{const f=findFood(s.name)||state.foods.find(x=>norm(x.n)===norm(s.name));
+      if(!f)return null;const gr=Math.max(5,r0(s.grams||defGrams(f))),k=gr/100;
+      return{name:f.n,grams:gr,kc:f.kcal*k,cc:f.c*k,pp:f.p*k,ff:f.f*k,reason:s.reason||""};}).filter(Boolean);
+    if(!sug.length){box.innerHTML=`<div class="aitag">✨ IA · ${meal}</div><div class="noplan">A IA não retornou itens válidos. Use as sugestões acima.</div>`;return;}
+    box.innerHTML=`<div class="aitag">✨ IA · pensado pra ${meal.toLowerCase()}</div>`+sug.map((s,i)=>sgRow(s.name,s.grams,s.kc,s.cc,s.pp,s.ff,s.reason,"a"+i)).join("");
+    wireSgAdd(box,sug.map(s=>({name:s.name,grams:s.grams})));
+  }catch(err){
+    const msg=state.aiProvider==="gemini"
+      ? "Não consegui falar com o Gemini. Confira a chave e o nome do modelo em Ajustes. As sugestões automáticas acima continuam valendo."
+      : "Não consegui falar com a IA agora (o modo Claude só funciona dentro do Claude; fora dele, configure um proxy ou use o Gemini em Ajustes). As sugestões automáticas acima continuam valendo.";
+    box.innerHTML=`<div class="aitag">✨ IA · ${meal}</div><div class="noplan">${msg}</div>`;
+  }
+}
+$("#aiBtn").onclick=aiSuggest;
+
+/* ---------- library view ---------- */
+let libQuery="",libCat="all",libEdit=null,libPendOnly=false;
+function renderLib(){
+  const sel=$("#libCat");if(sel.options.length===0||sel.dataset.n!=String(state.foods.length)){sel.dataset.n=state.foods.length;
+    sel.innerHTML=`<option value="all">Todas as categorias</option>`+CATS().map(c=>`<option value="${c}">${c}</option>`).join("");}
+  sel.value=libCat;sel.onchange=()=>{libCat=sel.value;renderLibList();};
+  const s=$("#libSearch");s.value=libQuery;s.oninput=()=>{libQuery=s.value;renderLibList();};
+  const pb=$("#libPend");$("#libPendCnt").textContent=pendCount();pb.classList.toggle("on",libPendOnly);
+  pb.onclick=()=>{libPendOnly=!libPendOnly;pb.classList.toggle("on",libPendOnly);renderLibList();};
+  renderLibEditor();renderLibList();
+}
+function renderLibList(){
+  const q=norm(libQuery);
+  let list=state.foods.filter(f=>(libCat==="all"||f.cat===libCat)&&(!q||norm(f.n).includes(q))&&(!libPendOnly||isPending(f)));
+  const totPend=pendCount();
+  $("#libCount").innerHTML=`${list.length} de ${state.foods.length} alimentos`+(totPend?` · <b>${totPend} com dados pendentes</b>`:"");
+  list=list.slice(0,300);
+  $("#libList").innerHTML=list.map(f=>{const i=state.foods.indexOf(f);const miss=missingOf(f);
+    return `<div class="librow"><div class="li"><div class="ln">${f.n}</div>
+      <div class="lc"><b class="num">${r0(f.kcal)}</b> kcal · <b class="dotc num">${r1(f.c)}C</b> <b class="dotp num">${r1(f.p)}P</b> <b class="dotf num">${r1(f.f)}G</b>${f.sat!=null?` · ${r1(f.sat)} sat`:""}${f.fi!=null?` · ${r1(f.fi)} fib`:""}${miss.length?`<br><span class="lmiss">⚠ falta: ${miss.join(", ")}</span>`:""}</div></div>
+      ${miss.length?`<span class="pendbadge">pendente</span>`:`<span class="lcat">${f.cat||"Outros"}</span>`}
+      <button class="iconbtn" data-libedit="${i}" aria-label="editar">✎</button>
+      <button class="iconbtn danger" data-libdel="${i}" aria-label="excluir">✕</button></div>`;}).join("")||`<div class="noplan">Nenhum alimento ${libPendOnly?"pendente ":""}encontrado.</div>`;
+  $("#libList").querySelectorAll("[data-libedit]").forEach(b=>b.onclick=()=>{libEdit=+b.dataset.libedit;renderLibEditor();$("#libEditor").scrollIntoView({behavior:"smooth",block:"center"});});
+  $("#libList").querySelectorAll("[data-libdel]").forEach(b=>b.onclick=()=>{const i=+b.dataset.libdel;if(confirm(`Excluir "${state.foods[i].n}"?`)){state.foods.splice(i,1);if(libEdit===i)libEdit=null;render();}});
+}
+function fld(lbl,id,val,extra=""){return `<div class="field"><label>${lbl}</label><input id="${id}" value="${val??""}" ${extra}></div>`;}
+function renderLibEditor(){
+  const w=$("#libEditor");
+  if(libEdit===null){w.innerHTML="";return;}
+  const isNew=libEdit==="new";const f=isNew?{n:"",cat:"Outros",kcal:"",c:"",p:"",f:"",su:"",sat:"",sa:"",fi:"",note:""}:state.foods[libEdit];
+  const cats=CATS();const opt=cats.map(c=>`<option ${c===f.cat?"selected":""}>${c}</option>`).join("");
+  w.innerHTML=`<div class="card pad" style="border:1px solid var(--prot);margin-bottom:14px">
+    <div style="font-weight:600;margin-bottom:12px;font-family:var(--display)">${isNew?"Novo alimento":"Editar alimento"} <span style="font-size:12px;color:var(--muted);font-weight:400">(por 100 g)</span></div>
+    <div class="edgrid">
+      <div class="field full"><label>Nome</label><input id="eN" value="${(f.n||"").replace(/"/g,'&quot;')}"></div>
+      <div class="field full"><label>Categoria</label><select id="eCat">${opt}<option ${!cats.includes(f.cat)?"selected":""} value="${f.cat||'Outros'}">${f.cat||'Outros'}</option></select></div>
+      ${fld("Calorias (kcal)","eKcal",f.kcal,'type="number" inputmode="decimal"')}
+      ${fld("Carboidrato (g)","eC",f.c,'type="number" inputmode="decimal"')}
+      ${fld("Proteína (g)","eP",f.p,'type="number" inputmode="decimal"')}
+      ${fld("Gordura total (g)","eF",f.f,'type="number" inputmode="decimal"')}
+      ${fld("Gordura saturada (g)","eSat",f.sat,'type="number" inputmode="decimal" placeholder="opcional"')}
+      ${fld("Açúcar (g)","eSu",f.su,'type="number" inputmode="decimal" placeholder="pendente"')}
+      ${fld("Sal (g)","eSa",f.sa,'type="number" inputmode="decimal" placeholder="pendente"')}
+      ${fld("Fibra (g)","eFi",f.fi,'type="number" inputmode="decimal" placeholder="pendente"')}
+      <div class="field full"><label>Observação de porção (opcional)</label><input id="eNote" value="${(f.note||"").replace(/"/g,'&quot;')}" placeholder="ex: 60 g por unidade"></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn sec" id="eCancel">Cancelar</button><button class="btn" id="eSave">Salvar alimento</button></div></div>`;
+  $("#eCancel").onclick=()=>{libEdit=null;renderLibEditor();};
+  $("#eSave").onclick=()=>{
+    const name=$("#eN").value.trim();const kcal=parseFloat($("#eKcal").value);
+    if(!name){alert("Dê um nome ao alimento.");return;}if(isNaN(kcal)){alert("Informe as calorias.");return;}
+    const nv=id=>{const v=$(id).value;return v===""?null:parseFloat(v);};
+    const obj={n:name,cat:$("#eCat").value||"Outros",kcal:kcal,c:nv("#eC")||0,p:nv("#eP")||0,f:nv("#eF")||0,su:nv("#eSu"),sat:nv("#eSat"),sa:nv("#eSa"),fi:nv("#eFi"),note:$("#eNote").value.trim()||null};
+    const dupe=state.foods.findIndex(x=>norm(x.n)===norm(name));
+    if(isNew){if(dupe>=0){alert("Já existe um alimento com esse nome.");return;}state.foods.push(obj);}
+    else{const oldName=state.foods[libEdit].n;if(dupe>=0&&dupe!==libEdit){alert("Já existe outro alimento com esse nome.");return;}
+      state.foods[libEdit]=obj;
+      if(oldName!==name)Object.values(state.days).forEach(day=>day.meals.forEach(m=>m.forEach(it=>{if(it.name===oldName)it.name=name;})));}
+    state.foods.sort((a,b)=>norm(a.n)<norm(b.n)?-1:1);libEdit=null;render();
+  };
+}
+$("#libNew").onclick=()=>{libEdit="new";renderLibEditor();$("#libEditor").scrollIntoView({behavior:"smooth",block:"start"});};
+$("#libReset").onclick=()=>{if(confirm("Restaurar a biblioteca para a versão original? Seus alimentos personalizados serão perdidos.")){state.foods=DEFAULT_FOODS.map(f=>Object.assign({},f));libEdit=null;render();}};
+
+/* ---------- history view ---------- */
+const METRICS=[["kcal","Calorias","kcal"],["c","Carbo","c"],["p","Proteína","p"],["fat","Gordura","fat"]];
+function metricTarget(m){const g=targets();return m==="kcal"?g.kcal:m==="c"?g.c:m==="p"?g.p:g.fat;}
+function metricVal(t,m){return m==="kcal"?t.kcal:m==="c"?t.c:m==="p"?t.p:t.fat;}
+function metricColor(m){return m==="kcal"?"var(--ink)":m==="c"?"var(--carb)":m==="p"?"var(--prot)":"var(--fat)";}
+function renderHist(){
+  const m=state.histMetric;
+  $("#metricSel").innerHTML=METRICS.map(([k,lbl,cls])=>`<button class="mtb ${cls} ${k===m?"on":""}" data-m="${k}">${lbl}</button>`).join("");
+  $("#metricSel").querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{state.histMetric=b.dataset.m;renderHist();});
+  // last 14 calendar days ending today
+  const days=[];const base=parseDate(todayStr());
+  for(let i=13;i>=0;i--){const dt=new Date(base);dt.setDate(dt.getDate()-i);const ds=todayStr(dt);days.push({ds,t:dayTotalsFor(ds)});}
+  const tgt=metricTarget(m),vals=days.map(d=>metricVal(d.t,m));
+  const recorded=vals.filter((v,i)=>state.days[days[i].ds]);
+  const avg=recorded.length?recorded.reduce((a,b)=>a+b,0)/recorded.length:0;
+  const unit=m==="kcal"?"kcal":"g";
+  $("#histStat").innerHTML=`Média dos dias com registro: <b class="num">${r0(avg)}</b> ${unit} · meta <b class="num">${r0(tgt)}</b> ${unit} · <b>${recorded.length}</b> de 14 dias com registro`;
+  // SVG bar chart
+  const W=700,H=240,padL=44,padR=12,padT=16,padB=34;const cw=W-padL-padR,ch=H-padT-padB;
+  const maxV=Math.max(tgt*1.15,...vals,1);const bw=cw/days.length;
+  const y=v=>padT+ch-(v/maxV)*ch;
+  const ty=y(tgt);
+  let bars="";days.forEach((d,i)=>{const v=vals[i];const has=!!state.days[d.ds];const x=padL+i*bw+bw*0.16,w=bw*0.68;const hgt=Math.max(0,padT+ch-y(v));
+    const over=m==="kcal"&&v>tgt+1;const col=has?(over?"var(--over)":metricColor(m)):"var(--line2)";
+    const cur=d.ds===state.activeDate;
+    bars+=`<rect x="${x.toFixed(1)}" y="${y(v).toFixed(1)}" width="${w.toFixed(1)}" height="${hgt.toFixed(1)}" rx="3" fill="${col}" opacity="${has?1:.5}" style="cursor:pointer" data-day="${d.ds}"></rect>`;
+    if(cur)bars+=`<rect x="${(x-2).toFixed(1)}" y="${(padT-3).toFixed(1)}" width="${(w+4).toFixed(1)}" height="${(ch+6).toFixed(1)}" rx="5" fill="none" stroke="var(--prot)" stroke-width="1.5" stroke-dasharray="3 3"></rect>`;
+    const dd=d.ds.split("-")[2];
+    bars+=`<text x="${(x+w/2).toFixed(1)}" y="${H-padB+16}" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--display)">${dd}</text>`;});
+  const svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg">
+    <line x1="${padL}" y1="${ty.toFixed(1)}" x2="${W-padR}" y2="${ty.toFixed(1)}" stroke="${metricColor(m)}" stroke-width="1.2" stroke-dasharray="5 4" opacity=".8"></line>
+    <text x="${padL-6}" y="${(ty+3).toFixed(1)}" text-anchor="end" font-size="10" fill="${metricColor(m)}" font-family="var(--display)">${r0(tgt)}</text>
+    <text x="${padL-6}" y="${(padT+4)}" text-anchor="end" font-size="9" fill="var(--faint)" font-family="var(--display)">${r0(maxV)}</text>
+    ${bars}</svg>`;
+  $("#chart").innerHTML=svg;
+  $("#chart").querySelectorAll("[data-day]").forEach(r=>r.onclick=()=>{if(state.days[r.dataset.day]){state.activeDate=r.dataset.day;state.view="day";render();}});
+  // list of recorded days desc
+  const keys=Object.keys(state.days).filter(k=>dayTotalsFor(k).kcal>0||state.days[k].meals.some(mm=>mm.length)).sort().reverse();
+  $("#histList").innerHTML=keys.length?keys.map(k=>{const t=dayTotalsFor(k),cur=k===state.activeDate;
+    return `<div class="histrow ${cur?"cur":""}"><div class="hi"><div class="hd">${k===todayStr()?"Hoje · ":""}${dateLabel(k)}</div>
+      <div class="hm"><b class="dotc num">${r0(t.c)}C</b> · <b class="dotp num">${r0(t.p)}P</b> · <b class="dotf num">${r0(t.fat)}G</b></div></div>
+      <div class="hk num">${r0(t.kcal)}<small> kcal</small></div>
+      <button class="hopen" data-open="${k}">ver</button></div>`;}).join(""):`<div class="noplan">Nenhum dia registrado ainda. Adicione alimentos em “Hoje”.</div>`;
+  $("#histList").querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{state.activeDate=b.dataset.open;state.view="day";state.adding=null;render();window.scrollTo(0,0);});
+}
+
+/* ---------- Supabase: contas e sincronização ---------- */
+let sb=null,sbUser=null,pulling=false,syncTimer=null,syncState="";
+function cleanUrl(u){u=(u||"").trim();try{return new URL(u).origin;}catch(e){return u.replace(/\/rest\/v1\/?$/i,"").replace(/\/+$/,"");}}
+function sbInit(){if(sb)return sb;if(state.supaUrl&&state.supaKey&&window.supabase){try{sb=window.supabase.createClient(cleanUrl(state.supaUrl),state.supaKey);}catch(e){sb=null;}}return sb;}
+function setSync(s){syncState=s;const a=$("#acctStatus");if(a)a.textContent=s||"—";const fs=$("#footSync");if(fs)fs.textContent=(sbUser&&s)?(" · "+s):"";}
+function cloudPayload(){const c=Object.assign({},state);delete c.supaUrl;delete c.supaKey;delete c.view;delete c.adding;return c;}
+function scheduleSync(){if(!sb||!sbUser||pulling)return;setSync("salvando…");clearTimeout(syncTimer);syncTimer=setTimeout(()=>sbPush(),1500);}
+async function sbPush(){if(!sb||!sbUser)return;try{const {error}=await sb.from("user_data").upsert({user_id:sbUser.id,data:cloudPayload(),updated_at:new Date().toISOString()});setSync(error?("erro: "+error.message):"sincronizado");}catch(e){setSync("offline");}}
+async function sbPull(){if(!sb||!sbUser)return;pulling=true;try{const {data,error}=await sb.from("user_data").select("data").eq("user_id",sbUser.id).maybeSingle();
+  if(!error&&data&&data.data){state=Object.assign(state,data.data);migrateState();setSync("sincronizado");}
+  else{await sbPush();setSync("sincronizado");}}catch(e){setSync("offline");}
+  pulling=false;render();}
+async function sbRefreshSession(){if(!sbInit())return;try{const {data}=await sb.auth.getSession();if(data&&data.session){sbUser=data.session.user;await sbPull();}}catch(e){}}
+function renderAcct(){
+  const host=$("#acctBody");sbInit();
+  if(!state.supaUrl||!state.supaKey){
+    host.innerHTML=`<div class="field"><label>URL do projeto Supabase</label><input id="acUrl" placeholder="https://xxxxx.supabase.co" autocomplete="off"></div>
+      <div class="field" style="margin-top:12px"><label>Chave pública (anon / publishable key)</label><input id="acKey" placeholder="eyJhbGci…" autocomplete="off"></div>
+      <button class="btn" id="acSaveCfg" style="margin-top:14px">Salvar configuração</button>
+      <div style="font-size:12px;color:var(--muted);margin-top:12px">Cole os dois valores do seu projeto (Supabase → Project Settings → API). Eles identificam o projeto, não você — podem ficar no app.</div>`;
+    $("#acSaveCfg").onclick=()=>{state.supaUrl=cleanUrl($("#acUrl").value);state.supaKey=$("#acKey").value.trim();sb=null;sbInit();render();};
+    return;
+  }
+  if(sbUser){
+    host.innerHTML=`<div style="font-family:var(--display);font-weight:600">Conectada</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px">${sbUser.email||""}</div>
+      <div style="font-size:12.5px;margin-top:12px">Sincronização: <b style="color:var(--prot-ink)" id="acctStatus">${syncState||"—"}</b></div>
+      <div style="display:flex;gap:10px;margin-top:16px"><button class="btn" id="acSyncNow">Sincronizar agora</button><button class="btn sec" id="acLogout">Sair</button></div>
+      <button class="ghost" id="acCfg" style="margin-top:14px;color:var(--muted);padding-left:0">Trocar configuração do Supabase</button>`;
+    $("#acSyncNow").onclick=()=>sbPush();
+    $("#acLogout").onclick=async()=>{try{await sb.auth.signOut();}catch(e){}sbUser=null;setSync("");render();};
+    $("#acCfg").onclick=()=>{state.supaUrl="";state.supaKey="";sb=null;render();};
+    return;
+  }
+  host.innerHTML=`<div class="field"><label>E-mail</label><input id="acEmail" type="email" autocomplete="username"></div>
+    <div class="field" style="margin-top:12px"><label>Senha</label><input id="acPw" type="password" autocomplete="current-password"></div>
+    <div id="acMsg" style="font-size:12.5px;color:var(--over);min-height:17px;margin:8px 0"></div>
+    <div style="display:flex;gap:10px"><button class="btn" id="acLogin">Entrar</button><button class="btn sec" id="acSignup">Criar conta</button></div>
+    <button class="ghost" id="acCfg" style="margin-top:14px;color:var(--muted);padding-left:0">Trocar configuração do Supabase</button>`;
+  const msg=t=>{const e=$("#acMsg");if(e){e.style.color=/criad|verifique|entrando|criando/i.test(t)?"var(--muted)":"var(--over)";e.textContent=t;}};
+  $("#acLogin").onclick=async()=>{msg("entrando…");try{const {data,error}=await sb.auth.signInWithPassword({email:$("#acEmail").value.trim(),password:$("#acPw").value});if(error){msg(error.message);return;}sbUser=data.user;await sbPull();}catch(e){msg("falha: "+((e&&e.message)||e));}};
+  $("#acSignup").onclick=async()=>{msg("criando…");try{const {data,error}=await sb.auth.signUp({email:$("#acEmail").value.trim(),password:$("#acPw").value});if(error){msg(error.message);return;}if(data.session){sbUser=data.user;await sbPull();}else{msg("Conta criada. Se pedir, confirme pelo e-mail e depois clique em Entrar.");}}catch(e){msg("falha: "+((e&&e.message)||e));}};
+  $("#acCfg").onclick=()=>{state.supaUrl="";state.supaKey="";sb=null;render();};
+}
+
+/* ---------- nav / setup / io ---------- */
+function renderFoot(){$("#foot").innerHTML=`Biblioteca de ${state.foods.length} alimentos · base 100 g · editável em “Biblioteca”.<br>${sbUser?("Conta: "+(sbUser.email||"")):"Dados neste navegador"}<span id="footSync">${(sbUser&&syncState)?(" · "+syncState):""}</span> · use “Salvar/Abrir” para backup.`;}
+$("#navDay").onclick=()=>{state.view="day";state.adding=null;render();};
+$("#navHist").onclick=()=>{state.view="hist";state.adding=null;render();};
+$("#navLib").onclick=()=>{state.view="lib";render();};
+$("#navAcct").onclick=()=>{state.view="acct";state.adding=null;render();};
+$("#datePrev").onclick=()=>shiftDate(-1);
+$("#dateNext").onclick=()=>shiftDate(1);
+$("#dateToday").onclick=()=>{state.activeDate=todayStr();state.adding=null;render();};
+function openSetup(){$("#sGoal").value=state.goal;$("#sNote").value=state.note;$("#sKcal").value=state.kcal;$("#sBmr").value=state.bmr;
+  $("#sC").value=state.pct.c;$("#sP").value=state.pct.p;$("#sF").value=state.pct.f;
+  $("#sSugar").value=state.lim.sugarPct;$("#sSalt").value=state.lim.salt;$("#sFiber").value=state.lim.fiber;
+  $("#sAi").value=state.aiEndpoint||"";
+  $("#sAiProvider").value=state.aiProvider||"claude";$("#sGemKey").value=state.gemKey||"";$("#sGemModel").value=state.gemModel||"gemini-2.5-flash";
+  checkPct();$("#setup").classList.remove("hidden");$("#setup").scrollIntoView({behavior:"smooth",block:"start"});}
+function checkPct(){const s=(+$("#sC").value||0)+(+$("#sP").value||0)+(+$("#sF").value||0);const el=$("#pctSum");
+  if(s===100){el.textContent="Soma = 100% ✓";el.className="pctsum ok";}else{el.textContent="Soma = "+s+"% (precisa dar 100%)";el.className="pctsum bad";}return s;}
+["sC","sP","sF"].forEach(id=>$("#"+id).oninput=checkPct);
+$("#btnSetup").onclick=()=>{$("#setup").classList.contains("hidden")?openSetup():$("#setup").classList.add("hidden");};
+$("#setCancel").onclick=()=>$("#setup").classList.add("hidden");
+$("#setSave").onclick=()=>{if(checkPct()!==100)return;
+  state.goal=$("#sGoal").value;state.note=$("#sNote").value.trim();state.kcal=+$("#sKcal").value||0;state.bmr=+$("#sBmr").value||0;
+  state.pct={c:+$("#sC").value||0,p:+$("#sP").value||0,f:+$("#sF").value||0};
+  state.lim={sugarPct:+$("#sSugar").value||10,salt:+$("#sSalt").value||5,fiber:+$("#sFiber").value||25};
+  state.aiEndpoint=$("#sAi").value.trim();
+  state.aiProvider=$("#sAiProvider").value;state.gemKey=$("#sGemKey").value.trim();state.gemModel=$("#sGemModel").value.trim()||"gemini-2.5-flash";
+  $("#setup").classList.add("hidden");render();};
+$("#btnExport").onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="diario-macros-"+new Date().toISOString().slice(0,10)+".json";a.click();};
+$("#btnImport").onclick=()=>$("#fileIn").click();
+$("#fileIn").onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const o=JSON.parse(rd.result);if(o&&(o.days||o.meals)){state=Object.assign(state,o);migrateState();render();}else alert("Arquivo sem dados de diário.");}catch(err){alert("Arquivo inválido.");}};rd.readAsText(f);};
+
+load();migrateState();render();sbRefreshSession();
+if("serviceWorker" in navigator && location.protocol.indexOf("http")===0){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+</script>
+</body>
+</html>
