@@ -1,0 +1,17 @@
+{
+  "name": "Diário de Macros",
+  "short_name": "Macros",
+  "description": "Controle pessoal de macronutrientes: refeições, metas e sugestões.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF8F3",
+  "theme_color": "#178A66",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
